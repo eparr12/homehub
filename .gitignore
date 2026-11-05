@@ -1,0 +1,39 @@
+# HomeHub .gitignore: one file for the whole repo, .NET and Node.
+# Ignore what a tool can regenerate, what belongs to one machine or person,
+# and anything secret (GIT-7, SEC-1). To see which line ignores a file:
+#   git check-ignore -v <path>
+
+# .NET build output
+bin/
+obj/
+# MSBuild binary logs (dotnet build -bl) record environment variables
+*.binlog
+
+# .NET test results and coverage
+TestResults/
+
+# Visual Studio and VS Code per-user state
+.vs/
+*.user
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Node, Vite and Vitest
+node_modules/
+dist/
+coverage/
+
+# Aspire publish and deploy output; its .env files hold real secrets
+aspire-output/
+
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+*.pfx
+
+# Operating system files
+Thumbs.db
+desktop.ini
+.DS_Store
