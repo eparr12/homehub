@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/HomeHub.AppHost/HomeHub.AppHost.csproj" />
+    <Project Path="src/HomeHub.ServiceDefaults/HomeHub.ServiceDefaults.csproj" />
+  </Folder>
+</Solution>
