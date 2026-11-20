@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\HomeHub.Application\HomeHub.Application.csproj" />
+    <ProjectReference Include="..\HomeHub.Infrastructure\HomeHub.Infrastructure.csproj" />
+    <ProjectReference Include="..\HomeHub.ServiceDefaults\HomeHub.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>

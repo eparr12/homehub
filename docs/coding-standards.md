@@ -42,8 +42,8 @@ The back end targets .NET 10 and C# 14, with the compiler and analyzers catching
 
 - **NET-1** Nullable reference types are enabled everywhere. The null-forgiving operator (!) needs a comment explaining why the value can't be null.
 - **NET-2** The build treats warnings as errors. Suppressing an analyzer rule needs a justification comment or an .editorconfig entry.
-- **NET-3** Naming: PascalCase for types, methods, properties and constants; camelCase for locals and parameters; \_camelCase for private fields; an I prefix for interfaces; an Async suffix for async methods.
-- **NET-4** Use file-scoped namespaces that match the folder path, and one top-level type per file.
+- **NET-3** Naming: PascalCase for types, methods, properties, events, constants (local ones too) and static readonly fields; camelCase for locals and parameters; \_camelCase for all other private fields, static or not; an I prefix for interfaces and a T prefix for type parameters; an Async suffix for async methods.
+- **NET-4** Use file-scoped namespaces that match the folder path, and one top-level type per file. The one exception is ServiceDefaults' Extensions.cs, which keeps the Microsoft.Extensions.Hosting namespace so every host can call AddServiceDefaults without a using; .editorconfig records the exception and its reason (NET-2).
 - **NET-5 (SHOULD)** Use records for DTOs, commands, queries and value objects, and mark classes sealed unless they're designed for inheritance.
 - **NET-6** Async all the way: never block with .Result, .Wait() or GetAwaiter().GetResult(), and never write async void.
 - **NET-7** Every async method that does I/O takes a CancellationToken and passes it along.
@@ -74,7 +74,7 @@ flowchart TB
     app --> domain
 ```
 
-Arrows are project references. Only AppHost, which orchestrates, references the two hosts.
+Arrows are project references. AppHost and ServiceDefaults aren't drawn: every host references ServiceDefaults (ARCH-5), and AppHost registers each host by its folder path with Aspire's AddDotnetProject instead of referencing it, so it never links the hosts' code.
 
 - **ARCH-1** HomeHub.Domain references no other project and no framework packages: no EF Core, ASP.NET Core or SDKs.
 - **ARCH-2** HomeHub.Application references only Domain and abstraction packages. It defines the interfaces it needs, such as IPhotoStorageProvider, and Infrastructure implements them.
@@ -208,8 +208,9 @@ Directory.Build.props at the repo root applies to every .NET project:
 </Project>
 ```
 
+- global.json pins the .NET 10 SDK and rolls forward only within 10.0 (latestFeature), so installing a newer SDK, such as .NET 11, can't change the build.
 - Package versions live in one Directory.Packages.props (Central Package Management).
-- .editorconfig holds the C# naming and style rules, and CI runs `dotnet format --verify-no-changes`.
+- .editorconfig holds the C# naming and style rules. The build enforces them through EnforceCodeStyleInBuild, with IDE1006 raised to a warning so the naming rules count too, and CI runs `dotnet format --verify-no-changes`.
 - tsconfig.json turns on strict, noUncheckedIndexedAccess, noImplicitOverride and noFallthroughCasesInSwitch.
 - ESLint (flat config) uses typescript-eslint's strict type-checked rules plus the react-hooks and jsx-a11y plugins; Prettier handles formatting.
 

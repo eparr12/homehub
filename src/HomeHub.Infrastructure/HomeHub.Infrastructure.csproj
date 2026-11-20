@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\HomeHub.Application\HomeHub.Application.csproj" />
+  </ItemGroup>
+
+</Project>
