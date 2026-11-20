@@ -1,5 +1,7 @@
 ﻿using HomeHub.Infrastructure.Persistence;
 
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace HomeHub.Infrastructure;
@@ -13,5 +15,12 @@ public static class InfrastructureServiceExtensions
     {
         builder.AddAzureNpgsqlDbContext<HomeHubDbContext>(DatabaseConnectionName, configureDbContextOptions: HomeHubModelOptions.Configure);
         return builder;
+    }
+
+    public static async Task MigrateDatabaseAsync(this IHost host, CancellationToken cancellationToken = default)
+    {
+        await using var scope = host.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<HomeHubDbContext>();
+        await dbContext.Database.MigrateAsync(cancellationToken);
     }
 }

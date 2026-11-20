@@ -9,4 +9,6 @@ var app = builder.Build();
 
 app.MapDefaultEndpoints();
 
-app.Run();
+await app.MigrateDatabaseAsync(CancellationToken.None);
+
+await app.RunAsync();
