@@ -100,8 +100,8 @@ Endpoints are thin, validated, authorized by default and described by the OpenAP
 
 PostgreSQL 18 is the source of truth, and every schema change is a reviewed migration.
 
-- **DATA-1** Tables and columns are snake_case and table names are plural, set once through an EF Core naming convention (for example EFCore.NamingConventions).
-- **DATA-2** Primary keys are UUIDv7.
+- **DATA-1** Tables and columns are snake_case and table names are plural, set once through an EF Core naming convention (for example EFCore.NamingConventions). The one exception is sync_state, which holds a single row, so a plural name would mislead; its EF Core configuration sets the name.
+- **DATA-2** Primary keys are UUIDv7. The one exception is sync_state, whose single row always has the key 1, so there's no key to generate.
 - **DATA-3** Store instants as timestamptz in UTC; convert to America/New_York only for display and holiday logic.
 - **DATA-4** Schema changes happen only through EF Core migrations. Review each migration's generated SQL, and never edit a migration that has been applied anywhere.
 - **DATA-5** Read queries use AsNoTracking and project to DTOs with Select; lazy loading stays off.

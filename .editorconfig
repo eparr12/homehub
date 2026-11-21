@@ -4,6 +4,8 @@ root = true
 [*]
 indent_style = space
 end_of_line = lf
+charset = utf-8
+insert_final_newline = true
 
 # Xml files
 [*.xml]
@@ -404,3 +406,8 @@ dotnet_naming_style.pascalcase_async.capitalization = pascal_case
 # so every host can call AddServiceDefaults without an extra using (NET-2).
 [src/HomeHub.ServiceDefaults/**.cs]
 dotnet_diagnostic.IDE0130.severity = none
+
+# EF Core generates these files in a style our analyzers reject (IDE0161, CA1861),
+# and DATA-4 says never to edit one once applied, so treat them as generated (NET-2).
+[src/HomeHub.Infrastructure/Persistence/Migrations/**.cs]
+generated_code = true
