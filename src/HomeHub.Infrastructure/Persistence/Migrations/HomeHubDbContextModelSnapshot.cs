@@ -35,13 +35,6 @@ namespace HomeHub.Infrastructure.Persistence.Migrations
                         .HasName("pk_sync_state");
 
                     b.ToTable("sync_state", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Version = 0L
-                        });
                 });
 #pragma warning restore 612, 618
         }

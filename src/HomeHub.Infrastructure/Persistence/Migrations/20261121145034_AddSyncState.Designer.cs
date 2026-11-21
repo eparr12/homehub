@@ -11,7 +11,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HomeHub.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(HomeHubDbContext))]
-    [Migration("20261120172604_AddSyncState")]
+    [Migration("20261121145034_AddSyncState")]
     partial class AddSyncState
     {
         /// <inheritdoc />
@@ -38,13 +38,6 @@ namespace HomeHub.Infrastructure.Persistence.Migrations
                         .HasName("pk_sync_state");
 
                     b.ToTable("sync_state", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Version = 0L
-                        });
                 });
 #pragma warning restore 612, 618
         }

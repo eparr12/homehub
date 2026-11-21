@@ -24,10 +24,11 @@ We will apply pending migrations when the Api starts, before it serves any reque
 - A failed migration is not caught. The exception ends the process before it serves a request, and Aspire or Azure reports the Api as failed ([OBS-3](../coding-standards.md)).
 - We will not call `EnsureCreated`, and we will not wrap migrations in a transaction of our own.
 - Every migration's SQL is still reviewed in its pull request with `dotnet ef migrations script` before it merges.
+- Every migration keeps the schema usable by the Api version before it. From build step 1.8, Azure Container Apps keeps the old revision serving until the new one is ready ([Revisions in Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/revisions)), so for a short time the old Api runs against the schema the new Api just migrated. Migration bundles wouldn't remove that window, because a bundle run before the deploy leaves the old Api on the new schema too. A breaking change, such as renaming or dropping a column, is split across releases: one adds the new shape, and a later one removes the old shape once no running version uses it.
 
 This decision holds while HomeHub runs one Api instance and its data is easy to rebuild. When any of the following becomes true, we will move to migration bundles run by the deployment pipeline, in a new ADR that supersedes this one:
 
-- The Api runs more than one replica, or deployments overlap old and new versions of the Api.
+- The Api runs more than one replica.
 - The Api's identity should lose the right to change the schema.
 - A migration is slow enough to fail the Api's startup health checks.
 - The household's data deserves a backup and a gated step before each schema change.
@@ -48,3 +49,5 @@ This decision holds while HomeHub runs one Api instance and its data is easy to 
 - The Api keeps the right to change the schema in Azure, which is more than it needs to serve requests.
 - A bad migration stops the Api from starting until a fix is deployed. Reverting the code doesn't revert the schema, because down migrations never run on their own.
 - The SQL is reviewed in the pull request, but nobody inspects it at deploy time, and a long migration delays startup.
+- A breaking schema change takes two releases instead of one.
+- The migration runs whenever the Api's entry point runs, not only when it's deployed. Build-time OpenAPI generation launches the entry point with an inert server ([Generate OpenAPI documents](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/openapi/aspnetcore-openapi)), so if API-7's types come from a document generated at build time (build step 1.7), the migration call has to skip that case, or every build would try to migrate a database.

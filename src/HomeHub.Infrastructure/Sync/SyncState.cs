@@ -1,6 +1,6 @@
-﻿namespace HomeHub.Infrastructure.Sync;
+namespace HomeHub.Infrastructure.Sync;
 
-public sealed class SyncState
+internal sealed class SyncState
 {
     public const int CounterRowId = 1;
 

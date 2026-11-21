@@ -22,6 +22,8 @@ namespace HomeHub.Infrastructure.Persistence.Migrations
                     table.PrimaryKey("pk_sync_state", x => x.id);
                 });
 
+            // Inserted by hand, not with HasData: version changes on every write, so the model must not own this row.
+            // If it did, a later migration could reset the counter and silently break every client's sync (SYNC-4).
             migrationBuilder.InsertData(
                 table: "sync_state",
                 columns: new[] { "id", "version" },
