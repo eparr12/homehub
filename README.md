@@ -25,6 +25,10 @@ aspire run
 
 `aspire doctor` checks your setup, including the SDK, the container runtime and the HTTPS development certificate. `aspire run` builds and starts the AppHost, a PostgreSQL 18 container and the API, then prints a Dashboard link. Open the full link, which includes a sign-in token. The `api` resource waits for the database, applies any pending migrations ([ADR-0002](docs/adr/0002-apply-migrations-at-startup.md)), then turns Running and Healthy, with its logs, traces and metrics. The container keeps no data between runs, so each run starts with a fresh database. Press Ctrl+C to stop.
 
+### Browse the database
+
+`aspire run` also starts [pgAdmin](https://www.pgadmin.org/), a web GUI for browsing and querying the database. Once pgAdmin is up, the `postgres` resource in the dashboard shows a **Manage (pgAdmin)** link. It opens pgAdmin already connected to the local server, with no sign-in. pgAdmin runs only on your machine and is never deployed.
+
 ## Change the database schema
 
 Schema changes go through EF Core migrations, and each migration's SQL is reviewed before it merges ([DATA-4](docs/coding-standards.md#data-and-ef-core)). The EF Core tool is pinned as a local tool, so restore it once after you clone. Then, from the repo root, add the migration and print its SQL. In this example the new migration is AddItems, and `migrations script` prints only what changed since AddSyncState, the one before it:
