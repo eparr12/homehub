@@ -8,8 +8,9 @@ const string PostgresImageTag = "18";
 
 var builder = DistributedApplication.CreateBuilder(args);
 
+// pgAdmin is a local-only tool. RunAsContainer skips this callback when publishing, so pgAdmin never deploys to Azure.
 var db = builder.AddAzurePostgresFlexibleServer(ServerName)
-    .RunAsContainer(container => container.WithImageTag(PostgresImageTag))
+    .RunAsContainer(container => container.WithImageTag(PostgresImageTag).WithPgAdmin())
     .AddDatabase(DatabaseName);
 
 builder.AddDotnetProject(ApiResourceName, ApiProjectPath)
