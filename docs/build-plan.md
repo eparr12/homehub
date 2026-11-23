@@ -4,22 +4,22 @@ Nov 23, 2026 · Ethan
 
 ## How to use this plan
 
-Work through the phases in order: Phases 0 to 2 make HomeHub usable, and each later phase adds one feature area. Claude Code writes the code; each step says what to ask for and what to check before you merge.
+Work through the phases in order: Phases 0 to 2 make HomeHub usable, and each later phase adds one feature area. Claude Code writes the code and merges it after review; each step says what to ask for and what to check before it merges.
 
 Every step has the same parts:
 
 - **What:** the outcome of the step.
 - **Why:** the reason for doing it this way.
 - **You:** the parts only you can do, such as accounts, settings and hardware. Not every step has them.
-- **Prompt:** what to paste into a fresh Claude Code session. Steps marked (plan mode) start in plan mode: read the plan, push back on anything that breaks a rule, then approve it.
-- **Check:** what to look for in the plan, the diff and the running app before you merge.
+- **Prompt:** what to paste into a fresh Claude Code session. The (plan mode) marker is optional: it flags a risky step, whose pull request starts with a short plan (AI-2). Start that step in plan mode only if you want to approve the plan before Claude edits.
+- **Check:** what to look for in the pull request, its review and the running app before you paste the review back for Claude to merge.
 - **Done when:** the check that ends the step.
 - **Learn:** where to study the ideas, so you can review what Claude writes.
 
 Assumptions:
 
 - Your desktop runs Windows 11 and hosts HomeHub until the NAS is ready (Phase 7). The UPERFECT plugs into the desktop as a second screen until the mini PC is ready (Phase 6).
-- The design lives in docs/project-overview.md and the rules in docs/coding-standards.md; rule IDs such as SYNC-5 refer to the standards. CLAUDE.md loads the standards into every session and already tells Claude to branch, run the checks, commit and open a pull request, so the prompts don't repeat that.
+- The design lives in docs/project-overview.md and the rules in docs/coding-standards.md; rule IDs such as SYNC-5 refer to the standards. CLAUDE.md loads the standards into every session and already tells Claude to branch, run the checks, commit, open a pull request and merge it after review, so the prompts don't repeat that.
 - Each prompt is written for a new session in the repo folder (AI-3). Edit a prompt freely; the rule IDs and doc sections it names matter more than its wording.
 
 ## At a glance
@@ -106,7 +106,7 @@ There's no official Claude Code extension for Visual Studio. You could run the `
 - Open an empty folder in VS Code, open Claude Code, and ask it to build a tiny Hono "hello" server in TypeScript that Node 26 runs directly.
 - Try the permission modes in the extension's mode picker: Manual asks before each action, Accept edits applies file edits without asking, and Plan reads and proposes but changes nothing.
 - Run /init to see the CLAUDE.md it drafts. Then try /memory, /clear for a fresh context, /compact, and /rewind to restore a checkpoint and undo a change.
-- Ask it to explain a file it wrote, line by line. You'll do this often (AI-5).
+- Ask it to explain a file it wrote, line by line. You'll do this often.
 - Delete the folder when you're done.
 
 **Done when:** you can explain plan mode, what CLAUDE.md is for, and how to undo a change.
@@ -1301,13 +1301,13 @@ guide. Extend update.sh to ping HEALTHCHECK_URL when it's set and
 These habits run through every phase and keep HomeHub shippable and maintainable.
 
 - **One step, one session, one PR:** start fresh for each step (AI-3), and keep pull requests under about 400 changed lines (GIT-4).
-- **Plan before code:** plan mode for anything risky (AI-2), and read every line before merging (AI-5).
-- **Independent reviews:** sync, security, migration and CI changes get /standards-review in a fresh session (AI-6).
+- **Plan in the PR:** risky changes start their pull request with a short plan (AI-2); plan mode is optional.
+- **A review for every PR:** paste each pull request into the HomeHub claude.ai project and paste the review back; Claude fixes the Blockers and merges once CI passes (AI-6).
 - **True docs:** update the Overview and CLAUDE.md in the same PR as the change (DOC-6), then re-upload changed docs to the claude.ai project so chats there stay current.
 - **ADRs:** write one whenever you choose between real alternatives.
 - **A release per gate:** tag v0.1.0 through v1.0.0, so the history is easy to follow.
 - **Weekly Dependabot pass:** merge green minor and patch updates; read the release notes before any major one.
-- **Learn while reviewing:** read a step's Learn links before you approve its plan.
+- **Learn while reviewing:** read a step's Learn links before you check its pull request.
 - **AI-security practice:** notice what Claude reads and runs, keep its permissions tight, and watch for instructions hidden in content it fetches.
 
 **Learn:**

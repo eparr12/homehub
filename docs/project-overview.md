@@ -355,12 +355,12 @@ Tests target the riskiest parts first: sync correctness, time logic and the offl
 
 ## Working with Claude Code
 
-Claude Code writes the code, tests and config. I decide the design, approve plans, read every diff and merge.
+Claude Code writes the code, tests and config, and takes each change from branch to merge. I decide the design, and the HomeHub claude.ai project reviews every pull request.
 
 - **Editor:** VS Code with the Claude Code extension. There's no official Claude Code extension for Visual Studio; there, you'd run the CLI in its terminal and lose the inline diffs and plan review.
 - **Context:** CLAUDE.md imports the coding standards; docs/ holds this overview, the build plan and the ADRs; .claude/rules/sync.md adds the sync rules whenever Claude works on sync files; .claude/settings.json holds the permissions.
-- **The loop for each build-plan step:** start a fresh session, paste the step's prompt, and use plan mode for risky steps. Approve the plan, and Claude implements test-first and runs `npm run check`. Claude opens a pull request, CI runs, and I read the diff, with `/standards-review` in a fresh session for risky areas. Then squash-merge, let it deploy itself, and check it on a phone or the wall.
-- **Not delegated:** design decisions (ADRs), merging, secrets, the Tailscale admin console, and the host's power and Docker settings.
+- **The loop for each build-plan step:** start a fresh session and paste the step's prompt. Claude implements test-first, runs `npm run check`, opens a pull request (risky steps start its description with a short plan) and says it's ready. I paste the pull request into the HomeHub claude.ai project and paste the review back. Claude fixes the Blockers and, once CI passes, squash-merges; the merge deploys itself, and I check it on a phone or the wall.
+- **Not delegated:** design decisions (ADRs), secrets, the Tailscale admin console, and the host's power and Docker settings.
 - **An AI-security lab on the side:** HomeHub is a safe place to practice least-privilege permissions for an agent and to notice prompt-injection surfaces, such as web pages, issue text, package READMEs and EXIF strings.
 
 ## Decision records

@@ -27,42 +27,15 @@
       "Bash(git *--no-index*)",
       "PowerShell(git *--no-index*)",
       "Bash(git *.env*)",
-      "PowerShell(git *.env*)",
-      "Bash(git push *)",
-      "PowerShell(git push *)",
-      "Bash(docker *)",
-      "PowerShell(docker *)",
-      "Bash(npm install *)",
-      "PowerShell(npm install *)",
-      "Bash(npm i *)",
-      "PowerShell(npm i *)",
-      "Bash(npm ci *)",
-      "PowerShell(npm ci *)",
-      "Bash(npm add *)",
-      "PowerShell(npm add *)",
-      "Bash(npm uninstall *)",
-      "PowerShell(npm uninstall *)",
-      "Bash(npm update *)",
-      "PowerShell(npm update *)",
-      "Bash(npx *)",
-      "PowerShell(npx *)",
-      "Bash(npm exec *)",
-      "PowerShell(npm exec *)",
-      "Edit(/package.json)",
-      "Edit(/package-lock.json)"
+      "PowerShell(git *.env*)"
     ],
     "deny": [
       "Read(**/.env*)",
       "Read(/data/**)",
       "PowerShell(Get-Content *.env*)",
-      "PowerShell(Select-String *.env*)",
-      "Bash(gh pr merge *)",
-      "PowerShell(gh pr merge *)",
-      "Bash(gh pr * merge *)",
-      "PowerShell(gh pr * merge *)"
+      "PowerShell(Select-String *.env*)"
     ],
     "blockReadsOutsideWorkingDirectories": true,
-    "disableBypassPermissionsMode": "disable",
-    "disableAutoMode": "disable"
+    "disableBypassPermissionsMode": "disable"
   }
 }
