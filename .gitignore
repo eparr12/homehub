@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Anchored to the repo root: /data/ holds the SQLite database, backups and
+# photos, while src/web/data/ is source code (GIT-7, DATA-9).
+/data/
+
+# Secrets stay on the host (SEC-1).
+.env*
+
+# Personal Claude Code settings; the shared ones are .claude/settings.json.
+.claude/settings.local.json

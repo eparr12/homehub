@@ -28,7 +28,7 @@ These apply to every file in the repo.
 
 ## Git workflow and pull requests
 
-All work reaches main through short-lived branches and pull requests that I read before merging.
+All work reaches main through short-lived branches and pull requests, which the HomeHub claude.ai project reviews before Claude merges them (AI-6).
 
 - **GIT-1** main is protected and always deployable: no direct pushes, and merging needs a pull request with passing CI. Every merge to main deploys itself.
 - **GIT-2** Branches are short-lived and named type/short-description, for example feat/grocery-outbox or fix/halloween-timezone.
@@ -36,7 +36,7 @@ All work reaches main through short-lived branches and pull requests that I read
 - **GIT-4 (SHOULD)** Keep each PR to one concern and under about 400 changed lines, not counting the lockfile.
 - **GIT-5** Squash-merge PRs so main has one commit per change, using the PR title as the message.
 - **GIT-6** Every PR description says what changed, why and how it was tested, and links its issue, build-plan step or ADR (template under Code reviews). PRs that Claude Code opens use the same template.
-- **GIT-7** Never commit secrets, .env files, the data/ folder, build output or node_modules; .gitignore and .gitattributes (LF line endings) live at the repo root.
+- **GIT-7** Never commit secrets, personal data such as real email addresses and family photos, .env files, the data/ folder, build output or node_modules; .gitignore and .gitattributes (LF line endings) live at the repo root.
 
 ## TypeScript
 
@@ -145,7 +145,7 @@ Sync is the riskiest code in HomeHub, so any change that touches it follows thes
 
 HomeHub is never on the public internet: the tailnet is the perimeter. These rules keep it closed and limit what a lost phone or a bad dependency can do.
 
-- **SEC-1** No secrets in the repo or the image. The host's .env file stays on the host, CI uses only GitHub's built-in token, and secret scanning with push protection stays on.
+- **SEC-1** No secrets in the repo or the image. The host's .env file stays on the host, CI uses only GitHub's built-in token, and secret scanning with push protection stays on. The .env and data/ in the repo folder hold only development values; real secrets and data stay on the host, outside the repo (C:\HomeHub for now).
 - **SEC-2** The server is reachable only from its own machine: Compose publishes `127.0.0.1:8080`, and Tailscale Serve on the same machine is its only client. Never publish the port on all interfaces, never turn on Tailscale Funnel, and never forward a router port.
 - **SEC-3** Every /api request (except health) must carry a Tailscale-User-Login header on the ALLOWED_USERS list, or it gets 401. The header is trusted only because of SEC-2. The DEV_USER override for local development works only when NODE_ENV is development, and config validation refuses it otherwise.
 - **SEC-4** Requests that change state use POST, PUT, PATCH or DELETE, never GET. They must be same-origin (Hono's csrf middleware) and carry JSON, except photo uploads. The server never sends CORS headers.
@@ -197,16 +197,16 @@ Write down the why; the code already shows the what.
 
 ## Working with Claude Code
 
-Claude Code writes most of HomeHub's code. I stay the architect and the reviewer, and these rules keep that arrangement safe.
+Claude Code writes most of HomeHub's code and takes each change from branch to merge. I stay the architect, the HomeHub claude.ai project reviews every PR, and these rules keep that arrangement safe.
 
 - **AI-1** CLAUDE.md at the repo root imports this file (`@docs/coding-standards.md`) and lists the commands, layout and workflow. Keep it under about 150 lines, and update it in the same PR as any change it describes (DOC-6).
-- **AI-2** Use plan mode, and approve a written plan before any edits, for changes to sync, migrations, security, CI/CD or deploy scripts, or anything that deletes data. **(SHOULD)** Do the same for any change that spans more than a few files.
+- **AI-2** Claude doesn't use plan mode or wait for approval before it edits. For changes to sync, migrations, security, CI/CD or deploy scripts, or anything that deletes data, the PR description starts with a short plan: the approach, the rule IDs it touches and the tests it adds. **(SHOULD)** Do the same for any change that spans more than a few files.
 - **AI-3** One task per session: start fresh (/clear) for each issue or build-plan step, and give Claude the step, the relevant docs sections and the check that proves it's done.
 - **AI-4** Claude runs `npm run check`, plus `npm run e2e` when UI, PWA or sync code changed, and shows them passing before calling a task done.
-- **AI-5** I read every line of the diff before merging. Code I can't explain doesn't merge: ask Claude to explain it or make it simpler.
-- **AI-6** Changes to sync, security, migrations or CI/CD get a second, independent review in a fresh session that didn't write the code, using the /standards-review skill or this claude.ai project.
-- **AI-7** The committed .claude/settings.json allows npm scripts and read-only Git, asks before `git push`, Docker commands and installs, and denies reading .env files and the data/ folder. Never use bypassPermissions mode on the desktop.
-- **AI-8** New dependencies are proposed in the plan with a reason (GEN-9); Claude never changes package.json or the lockfile without saying so.
+- **AI-5** Claude runs the whole loop: it builds each change on a branch, pushes, opens the PR with `gh pr create` and the template, and tells me when it's ready for review.
+- **AI-6** Every PR gets a review from the HomeHub claude.ai project before it merges. I paste the review into Claude's session, ending with an instruction to merge. Claude fixes every Blocker, handles each Should fix as the Code reviews table says, pushes, and merges with `gh pr merge --squash --delete-branch` once CI passes (CI arrives in build-plan step 1.7). Claude merges only when my message tells it to.
+- **AI-7** The committed .claude/settings.json allows npm scripts and read-only Git except `git diff`, because a path outside the repo switches it to `--no-index` without the flag; asks before Git commands that use `--output` or `--no-index` or name a .env file; and denies reading .env files and the data/ folder. Every shell rule is written for both Bash and PowerShell, `blockReadsOutsideWorkingDirectories` stops Claude's file tools from reading outside the repo, and `disableBypassPermissionsMode` keeps bypassPermissions off. Sessions run in Auto mode, which drops broad allows for package-manager run commands such as `npm run *` on entry, so there a classifier decides npm scripts as well as every command no rule covers.
+- **AI-8** New dependencies are named in the PR description with a reason (GEN-9); Claude never changes package.json or the lockfile without saying so there.
 - **AI-9** Never paste secrets or other people's personal data into a prompt; Claude Code keeps transcripts as plain text on the desktop.
 - **AI-10** Before using a library API that isn't already used in the repo, Claude checks the installed package's types or its official docs. An invented or guessed API is a Blocker.
 
@@ -282,7 +282,7 @@ Review checklist, in priority order:
 7. Readability: names, size and structure, with comments that explain why.
 8. Performance: bounded queries, no work on the request path that belongs in a job, and smooth wall animations.
 
-**Asking for a review:** in a fresh Claude Code session, run `/standards-review`, a project skill in .claude/skills that reviews `git diff main...HEAD` against this doc. Or paste the PR description and the diff into the HomeHub claude.ai project. Either way, the review comes back grouped by severity, with each finding citing a rule ID. The bundled `/security-review` is a useful second pass for SEC changes.
+**Getting a review:** when Claude says a PR is ready, ask the HomeHub claude.ai project to review it by its number; the project fetches the PR from GitHub. The review comes back grouped by severity, with each finding citing a rule ID, and it names any new ADR or design decision for me to accept. Paste the review back into Claude's session, ending with an instruction to merge; Claude handles each finding as the Before merge column says, then merges (AI-6). `/standards-review`, a project skill in .claude/skills that reviews `git diff main...HEAD` against this doc in a fresh session, and the bundled `/security-review` are optional extra passes.
 
 PR template (.github/pull_request_template.md):
 
@@ -297,7 +297,7 @@ PR template (.github/pull_request_template.md):
 
 - [ ] `npm run check` passes, and `npm run e2e` passes if UI, PWA or sync changed
 - [ ] Tests added or updated; none weakened or skipped (TEST-10)
-- [ ] I read every line of this diff and can explain it (AI-5)
+- [ ] Reviewed in the claude.ai project; Blockers fixed
 - [ ] Docs, CLAUDE.md or an ADR updated if setup, design or a decision changed
 - [ ] Checked on a phone or the wall (UI changes only)
 ```

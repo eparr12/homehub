@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "PowerShell(npm run *)",
+      "Bash(npm start *)",
+      "PowerShell(npm start *)",
+      "Bash(git status *)",
+      "PowerShell(git status *)",
+      "Bash(git log *)",
+      "PowerShell(git log *)",
+      "Bash(git show *)",
+      "PowerShell(git show *)",
+      "Bash(git ls-files *)",
+      "PowerShell(git ls-files *)",
+      "Bash(git rev-parse *)",
+      "PowerShell(git rev-parse *)",
+      "Bash(git branch --show-current)",
+      "PowerShell(git branch --show-current)",
+      "Bash(git remote -v)",
+      "PowerShell(git remote -v)"
+    ],
+    "ask": [
+      "Bash(git *--output*)",
+      "PowerShell(git *--output*)",
+      "Bash(git *--no-index*)",
+      "PowerShell(git *--no-index*)",
+      "Bash(git *.env*)",
+      "PowerShell(git *.env*)"
+    ],
+    "deny": [
+      "Read(**/.env*)",
+      "Read(/data/**)",
+      "PowerShell(Get-Content *.env*)",
+      "PowerShell(Select-String *.env*)"
+    ],
+    "blockReadsOutsideWorkingDirectories": true,
+    "disableBypassPermissionsMode": "disable"
+  }
+}

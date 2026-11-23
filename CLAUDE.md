@@ -1,6 +1,6 @@
 # HomeHub
 
-Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a phone layout, served by one Node 26 + Hono server with SQLite, reachable only over Tailscale. Features: offline-first grocery list, Lightroom photo display, holiday countdown with seasonal themes.
+Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a phone layout, served by one Node 26 + Hono server with SQLite, reachable only over Tailscale. Features: offline-first grocery list, Lightroom photo display, holiday countdown with seasonal themes. The GitHub repo (eparr12/homehub) is public.
 
 ## Read before you work
 
@@ -27,14 +27,15 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 
 ## How we work
 
-- Use plan mode for sync, migrations, security, CI/CD, deploy scripts and anything that deletes data. The plan names the rule IDs it touches and the tests you'll add.
+- You run the whole loop: work on a branch, commit with Conventional Commits, push, open the PR with `gh pr create` using the template, and tell me it's ready. Don't use plan mode or wait for approval (AI-2, AI-5).
+- For sync, migrations, security, CI/CD, deploy scripts and anything that deletes data, start the PR description with a short plan: the approach, the rule IDs it touches and the tests you add (AI-2).
+- I paste back a review from the HomeHub claude.ai project, ending with an instruction to merge. Fix its Blockers, handle each Should fix as the Code reviews table says, push, then merge with `gh pr merge --squash --delete-branch` once CI passes. Merge only when my message tells you to, never before the review (AI-6).
 - One task per session, and pull requests under about 400 changed lines.
 - Write tests first for logic. Never weaken, skip or delete a test to make it pass (TEST-10).
-- Don't add a dependency without giving the reason in the plan (GEN-9, AI-8).
+- Don't add a dependency without giving the reason in the PR description (GEN-9, AI-8).
 - Check the installed types or official docs before using a library API that isn't already used in the repo (AI-10).
 - Never edit a migration that has run; add a new one (DATA-4).
 - Never read or print .env files or anything in data/.
-- Work on a branch, commit with Conventional Commits, then push and open the PR with `gh pr create` using the template. I review and merge.
 - When the design, commands or layout change, update docs/project-overview.md and this file in the same PR (DOC-6).
 
 ## Gotchas
