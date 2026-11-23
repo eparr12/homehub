@@ -28,7 +28,7 @@ These apply to every file in the repo.
 
 ## Git workflow and pull requests
 
-All work reaches main through short-lived branches and pull requests that I read before merging.
+All work reaches main through short-lived branches and pull requests, which the HomeHub claude.ai project reviews before Claude merges them (AI-6).
 
 - **GIT-1** main is protected and always deployable: no direct pushes, and merging needs a pull request with passing CI. Every merge to main deploys itself.
 - **GIT-2** Branches are short-lived and named type/short-description, for example feat/grocery-outbox or fix/halloween-timezone.
@@ -36,7 +36,7 @@ All work reaches main through short-lived branches and pull requests that I read
 - **GIT-4 (SHOULD)** Keep each PR to one concern and under about 400 changed lines, not counting the lockfile.
 - **GIT-5** Squash-merge PRs so main has one commit per change, using the PR title as the message.
 - **GIT-6** Every PR description says what changed, why and how it was tested, and links its issue, build-plan step or ADR (template under Code reviews). PRs that Claude Code opens use the same template.
-- **GIT-7** Never commit secrets, .env files, the data/ folder, build output or node_modules; .gitignore and .gitattributes (LF line endings) live at the repo root.
+- **GIT-7** Never commit secrets, personal data such as real email addresses and family photos, .env files, the data/ folder, build output or node_modules; .gitignore and .gitattributes (LF line endings) live at the repo root.
 
 ## TypeScript
 
@@ -204,8 +204,8 @@ Claude Code writes most of HomeHub's code and takes each change from branch to m
 - **AI-3** One task per session: start fresh (/clear) for each issue or build-plan step, and give Claude the step, the relevant docs sections and the check that proves it's done.
 - **AI-4** Claude runs `npm run check`, plus `npm run e2e` when UI, PWA or sync code changed, and shows them passing before calling a task done.
 - **AI-5** Claude runs the whole loop: it builds each change on a branch, pushes, opens the PR with `gh pr create` and the template, and tells me when it's ready for review.
-- **AI-6** Every PR gets a review from the HomeHub claude.ai project before it merges. I paste the review into Claude's session; Claude fixes every Blocker, handles each Should fix as the Code reviews table says, pushes, and merges with `gh pr merge --squash --delete-branch` once CI passes (CI arrives in build-plan step 1.7).
-- **AI-7** The committed .claude/settings.json allows npm scripts and read-only Git except `git diff`, because a path outside the repo switches it to `--no-index` without the flag; asks before Git commands that use `--output` or `--no-index` or name a .env file; and denies reading .env files and the data/ folder. Every shell rule is written for both Bash and PowerShell, `blockReadsOutsideWorkingDirectories` stops Claude's file tools from reading outside the repo, and `disableBypassPermissionsMode` keeps bypassPermissions off. Auto mode is allowed, so in that mode a classifier decides the commands no rule covers.
+- **AI-6** Every PR gets a review from the HomeHub claude.ai project before it merges. I paste the review into Claude's session, ending with an instruction to merge. Claude fixes every Blocker, handles each Should fix as the Code reviews table says, pushes, and merges with `gh pr merge --squash --delete-branch` once CI passes (CI arrives in build-plan step 1.7). Claude merges only when my message tells it to.
+- **AI-7** The committed .claude/settings.json allows npm scripts and read-only Git except `git diff`, because a path outside the repo switches it to `--no-index` without the flag; asks before Git commands that use `--output` or `--no-index` or name a .env file; and denies reading .env files and the data/ folder. Every shell rule is written for both Bash and PowerShell, `blockReadsOutsideWorkingDirectories` stops Claude's file tools from reading outside the repo, and `disableBypassPermissionsMode` keeps bypassPermissions off. Sessions run in Auto mode, which drops broad allows for package-manager run commands such as `npm run *` on entry, so there a classifier decides npm scripts as well as every command no rule covers.
 - **AI-8** New dependencies are named in the PR description with a reason (GEN-9); Claude never changes package.json or the lockfile without saying so there.
 - **AI-9** Never paste secrets or other people's personal data into a prompt; Claude Code keeps transcripts as plain text on the desktop.
 - **AI-10** Before using a library API that isn't already used in the repo, Claude checks the installed package's types or its official docs. An invented or guessed API is a Blocker.
@@ -282,7 +282,7 @@ Review checklist, in priority order:
 7. Readability: names, size and structure, with comments that explain why.
 8. Performance: bounded queries, no work on the request path that belongs in a job, and smooth wall animations.
 
-**Getting a review:** when Claude says a PR is ready, paste its description and diff into the HomeHub claude.ai project, then paste the review back into Claude's session. The review comes back grouped by severity, with each finding citing a rule ID, and Claude handles each finding as the Before merge column says before it merges (AI-6). `/standards-review`, a project skill in .claude/skills that reviews `git diff main...HEAD` against this doc in a fresh session, and the bundled `/security-review` are optional extra passes.
+**Getting a review:** when Claude says a PR is ready, ask the HomeHub claude.ai project to review it by its number; the project fetches the PR from GitHub. The review comes back grouped by severity, with each finding citing a rule ID, and it names any new ADR or design decision for me to accept. Paste the review back into Claude's session, ending with an instruction to merge; Claude handles each finding as the Before merge column says, then merges (AI-6). `/standards-review`, a project skill in .claude/skills that reviews `git diff main...HEAD` against this doc in a fresh session, and the bundled `/security-review` are optional extra passes.
 
 PR template (.github/pull_request_template.md):
 

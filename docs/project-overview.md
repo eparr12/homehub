@@ -10,7 +10,7 @@ HomeHub is a family dashboard for a 21.5-inch touchscreen in our entryway, with 
 - **Photo display:** shows my wife's Canon photography, fed from her Lightroom exports.
 - **Holiday countdown:** upcoming holidays with artwork and quotes, plus seasonal and holiday color themes across the app.
 
-HomeHub is a passion project that I'll run and maintain for years. Claude Code writes most of the code, while I act as architect and reviewer. It is no longer my portfolio project, because my career focus is moving to C++ and AI security. It costs $0 to run, and it's never on the public internet: every device reaches it over Tailscale.
+HomeHub is a passion project that I'll run and maintain for years. Claude Code writes most of the code and merges it after a review from the HomeHub claude.ai project, while I act as architect. It is no longer my portfolio project, because my career focus is moving to C++ and AI security. It costs $0 to run, and it's never on the public internet: every device reaches it over Tailscale.
 
 ## Goals and constraints
 
@@ -359,7 +359,7 @@ Claude Code writes the code, tests and config, and takes each change from branch
 
 - **Editor:** VS Code with the Claude Code extension. There's no official Claude Code extension for Visual Studio; there, you'd run the CLI in its terminal and lose the inline diffs and plan review.
 - **Context:** CLAUDE.md imports the coding standards; docs/ holds this overview, the build plan and the ADRs; .claude/rules/sync.md adds the sync rules whenever Claude works on sync files; .claude/settings.json holds the permissions.
-- **The loop for each build-plan step:** start a fresh session and paste the step's prompt. Claude implements test-first, runs `npm run check`, opens a pull request (risky steps start its description with a short plan) and says it's ready. I paste the pull request into the HomeHub claude.ai project and paste the review back. Claude fixes the Blockers and, once CI passes, squash-merges; the merge deploys itself, and I check it on a phone or the wall.
+- **The loop for each build-plan step:** start a fresh session and paste the step's prompt. Claude implements test-first, runs `npm run check`, opens a pull request (risky steps start its description with a short plan) and says it's ready. I ask the HomeHub claude.ai project to review the pull request by its number, then paste the review back with an instruction to merge. Claude fixes the Blockers and, once CI passes, squash-merges; the merge deploys itself, and I check it on a phone or the wall.
 - **Not delegated:** design decisions (ADRs), secrets, the Tailscale admin console, and the host's power and Docker settings.
 - **An AI-security lab on the side:** HomeHub is a safe place to practice least-privilege permissions for an agent and to notice prompt-injection surfaces, such as web pages, issue text, package READMEs and EXIF strings.
 

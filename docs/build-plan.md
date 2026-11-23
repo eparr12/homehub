@@ -167,8 +167,7 @@ Phase 1 puts a thin but real HomeHub on your phones and the UPERFECT, with tests
 Read CLAUDE.md and everything in docs/. Set up the repo's housekeeping:
 - .gitignore (node_modules, dist, data, .env*, coverage, playwright-report,
   test-results, .claude/settings.local.json) and .gitattributes (LF endings)
-- .claude/settings.json per AI-7: allow npm scripts and read-only git; ask
-  before git push, docker and npm install; deny reading .env* and data/
+- .claude/settings.json per AI-7
 - .claude/skills/standards-review/SKILL.md: a skill I invoke manually that
   reviews `git diff main...HEAD` (or the paths I pass) against
   docs/coding-standards.md and reports findings grouped by severity
@@ -1302,7 +1301,7 @@ These habits run through every phase and keep HomeHub shippable and maintainable
 
 - **One step, one session, one PR:** start fresh for each step (AI-3), and keep pull requests under about 400 changed lines (GIT-4).
 - **Plan in the PR:** risky changes start their pull request with a short plan (AI-2); plan mode is optional.
-- **A review for every PR:** paste each pull request into the HomeHub claude.ai project and paste the review back; Claude fixes the Blockers and merges once CI passes (AI-6).
+- **A review for every PR:** ask the HomeHub claude.ai project to review each pull request by its number, then paste the review back with an instruction to merge; Claude fixes the Blockers and merges once CI passes (AI-6).
 - **True docs:** update the Overview and CLAUDE.md in the same PR as the change (DOC-6), then re-upload changed docs to the claude.ai project so chats there stay current.
 - **ADRs:** write one whenever you choose between real alternatives.
 - **A release per gate:** tag v0.1.0 through v1.0.0, so the history is easy to follow.
