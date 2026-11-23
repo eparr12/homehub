@@ -13,6 +13,7 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 
 - `npm run dev`: server (`node --watch`) plus Vite, with /api and /media proxied; DEV_USER stands in for the Tailscale identity
 - `npm run check`: typecheck, lint, format check and unit tests; must pass before you say a task is done
+- `npm run format`: Prettier rewrites code to the style `npm run check` expects (Markdown is left alone)
 - `npm run e2e`: Playwright; run it when UI, PWA or sync code changed
 - `npm run build`: production web build into dist/web
 - `docker build -t homehub:local .`: build the production image locally (CI builds and pushes the real one)
@@ -34,6 +35,7 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 - Write tests first for logic. Never weaken, skip or delete a test to make it pass (TEST-10).
 - Don't add a dependency without giving the reason in the PR description (GEN-9, AI-8).
 - Check the installed types or official docs before using a library API that isn't already used in the repo (AI-10).
+- Read files, node_modules included, with your Read, Grep and Glob tools instead of cd, cat, grep, ls, head or node -e in the shell. Those tools don't need my approval inside the repo; shell one-liners keep stopping for it.
 - Never edit a migration that has run; add a new one (DATA-4).
 - Never read or print .env files or anything in data/.
 - When the design, commands or layout change, update docs/project-overview.md and this file in the same PR (DOC-6).
@@ -44,6 +46,8 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 - better-sqlite3 is synchronous: never pass an async function to `db.transaction()`.
 - Never await a network call inside a Dexie transaction.
 - Instants are UTC; theme dates use Temporal in HOME_TZ, never UTC.
-- The server trusts Tailscale identity headers only because it listens on 127.0.0.1; never change the port binding.
+- The server trusts Tailscale identity headers only because Tailscale Serve on the same machine is its only client: HOST defaults to 127.0.0.1 and is 0.0.0.0 only inside the container, which Compose publishes on 127.0.0.1:8080 alone (SEC-2). Never widen either binding.
+- `dependencies` holds only what the server loads at runtime, because the image installs with `npm ci --omit=dev`. Web libraries are bundled into dist/web, so they go in devDependencies.
+- The `overrides` entry in package.json lets eslint-plugin-jsx-a11y 6.10 run on ESLint 10, which it works with but doesn't declare yet. Remove it once a jsx-a11y release supports ESLint 10.
 
 @docs/coding-standards.md
