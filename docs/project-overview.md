@@ -450,7 +450,7 @@ Everything HomeHub needs is free; the only paid tool is the Claude plan I alread
 | Electricity | The desktop stays on until the NAS takes over | One more reason to finish the NAS |
 | Claude Code | Uses my existing Claude plan | Not a HomeHub running cost |
 
-Every dependency uses MIT, Apache-2.0 or a similarly permissive license (GEN-9); keep it that way.
+Every dependency that ships in the image uses MIT, Apache-2.0 or a similarly permissive license (GEN-9); keep it that way. Two build- and test-time tools that never ship use MPL-2.0: lightningcss (through Tailwind and Vite) and axe-core (through eslint-plugin-jsx-a11y).
 
 ## Sources
 

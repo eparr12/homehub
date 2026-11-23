@@ -69,6 +69,20 @@ export default defineConfig(
           ],
         },
       ],
+      // tsc enforces TS-3 under nodenext but not under src/web's bundler
+      // resolution. This is the core rule because a pattern in the rule above
+      // would skip any `import type` that allowTypeImports lets through.
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^\\.{1,2}/(?:.*/)?[^./]+$',
+              message: 'Relative imports include their file extension (TS-3).',
+            },
+          ],
+        },
+      ],
     },
   },
   {
@@ -83,6 +97,21 @@ export default defineConfig(
               message: 'src/server never imports from src/web (ARCH-3).',
             },
           ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/server/main.ts'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'process',
+          property: 'env',
+          message:
+            'Only src/server/main.ts reads process.env; take config as a parameter (ARCH-6).',
         },
       ],
     },
