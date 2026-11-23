@@ -55,7 +55,11 @@
       "Read(**/.env*)",
       "Read(/data/**)",
       "PowerShell(Get-Content *.env*)",
-      "PowerShell(Select-String *.env*)"
+      "PowerShell(Select-String *.env*)",
+      "Bash(gh pr merge *)",
+      "PowerShell(gh pr merge *)",
+      "Bash(gh pr * merge *)",
+      "PowerShell(gh pr * merge *)"
     ],
     "blockReadsOutsideWorkingDirectories": true,
     "disableBypassPermissionsMode": "disable",
