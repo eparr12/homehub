@@ -8,8 +8,6 @@
       "PowerShell(npm start *)",
       "Bash(git status *)",
       "PowerShell(git status *)",
-      "Bash(git diff *)",
-      "PowerShell(git diff *)",
       "Bash(git log *)",
       "PowerShell(git log *)",
       "Bash(git show *)",
