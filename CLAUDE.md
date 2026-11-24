@@ -11,7 +11,7 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 
 ## Commands
 
-- `npm run dev`: server (`node --watch`) plus Vite, with /api and /media proxied; DEV_USER stands in for the Tailscale identity
+- `npm run dev`: server (`node --watch`, loading .env if it exists) plus Vite, with /api and /media proxied; DEV_USER stands in for the Tailscale identity
 - `npm run check`: typecheck, lint, format check and unit tests; must pass before you say a task is done
 - `npm run format`: Prettier rewrites code to the style `npm run check` expects (Markdown is left alone)
 - `npm run e2e`: Playwright; run it when UI, PWA or sync code changed
@@ -47,6 +47,8 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 - Never await a network call inside a Dexie transaction.
 - Instants are UTC; theme dates use Temporal in HOME_TZ, never UTC.
 - The server trusts Tailscale identity headers only because Tailscale Serve on the same machine is its only client: HOST defaults to 127.0.0.1 and is 0.0.0.0 only inside the container, which Compose publishes on 127.0.0.1:8080 alone (SEC-2). Never widen either binding.
+- Hono runs middleware and routes in the order app.ts adds them, so every /api route goes below `.use('/api/*', identity(...))`; only GET /api/health sits above it. A test walks app.routes and fails on any /api route that answers without an identity.
+- Answer errors with `problem(c, status)` from middleware/errors.ts, or throw and let `app.onError` answer, never with c.text or c.json (SRV-4). The one exception is GET /api/health's 503, a status report that Docker and the wall's status tile read. Log through `c.get('log')`, which carries the request ID and the short name, and never log a login (SEC-7).
 - `dependencies` holds only what the server loads at runtime, because the image installs with `npm ci --omit=dev`. Web libraries are bundled into dist/web, so they go in devDependencies.
 - The `overrides` entry in package.json lets eslint-plugin-jsx-a11y 6.10 run on ESLint 10, which it works with but doesn't declare yet. Remove it once a jsx-a11y release supports ESLint 10.
 - package.json's `allowScripts` denies better-sqlite3's install script. The package ships prebuilt binaries for Windows and Linux, but installs from the lockfile, such as `npm ci`, ignore its `"gypfile": false` and would run node-gyp, which needs Python and build tools. Never approve the script or install build tools for it. npm honors `allowScripts` from 11.16, so use Node.js 26.4 or newer, which ships npm 11.17.
