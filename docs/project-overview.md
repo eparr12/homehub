@@ -362,6 +362,8 @@ Tests target the riskiest parts first: sync correctness, time logic and the offl
 | Client | Vitest, fake-indexeddb, Testing Library | A change and its outbox entry save together; rebase after a pull; rejected mutations leave the outbox; loading, empty, offline and error states |
 | End to end | Playwright (wall in Chromium, iPhone in WebKit, Android in Chromium), axe | Check items off offline, reconnect and see it on the wall; add on the wall while the server is down; each theme renders and passes axe; the app installs and loads offline |
 
+The end-to-end tests run against the production build, served by the real server in production mode, on a port of its own and with a new data folder for each run. Playwright sends the Tailscale-User-Login header itself, so the real identity check runs, and any test whose pages log an error, throw one or break the Content Security Policy fails, unless it causes that problem on purpose.
+
 ## Working with Claude Code
 
 Claude Code writes the code, tests and config, and takes each change from branch to merge. I decide the design, and the HomeHub claude.ai project reviews every pull request.
@@ -459,7 +461,7 @@ Everything HomeHub needs is free; the only paid tool is the Claude plan I alread
 | Electricity | The desktop stays on until the NAS takes over | One more reason to finish the NAS |
 | Claude Code | Uses my existing Claude plan | Not a HomeHub running cost |
 
-Every dependency that ships in the image uses MIT, Apache-2.0 or a similarly permissive license (GEN-9); keep it that way. Some build- and test-time tools that never ship use weak copyleft licenses: lightningcss (through Tailwind and Vite), axe-core (through eslint-plugin-jsx-a11y) and ico-endec (through @vite-pwa/assets-generator) use MPL-2.0, and the libvips binaries in sharp (also through the generator) use LGPL-3.0-or-later.
+Every dependency that ships in the image uses MIT, Apache-2.0 or a similarly permissive license (GEN-9); keep it that way. Some build- and test-time tools that never ship use weak copyleft licenses: lightningcss (through Tailwind and Vite), @axe-core/playwright, axe-core (through it and eslint-plugin-jsx-a11y) and ico-endec (through @vite-pwa/assets-generator) use MPL-2.0, and the libvips binaries in sharp (also through the generator) use LGPL-3.0-or-later.
 
 ## Sources
 

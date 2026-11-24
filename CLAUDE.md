@@ -14,7 +14,7 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 - `npm run dev`: server (`node --watch`, loading .env if it exists) plus Vite, with /api and /media proxied; DEV_USER stands in for the Tailscale identity
 - `npm run check`: typecheck, lint, format check and unit tests; must pass before you say a task is done
 - `npm run format`: Prettier rewrites code to the style `npm run check` expects (Markdown is left alone)
-- `npm run e2e`: Playwright; run it when UI, PWA or sync code changed
+- `npm run e2e`: builds the app, starts the real server on 127.0.0.1:8181 and runs Playwright's wall, iphone and android projects, with the report in playwright-report/ (`npx playwright show-report` opens it); run it when UI, PWA or sync code changed. It needs the browsers, once: `npx playwright install chromium webkit`
 - `npm run build`: production web build into dist/web
 - `npm run dev:server`: the server alone, on http://127.0.0.1:8080; after `npm run build` it also serves the build with the real security headers, to try the service worker
 - `npm run icons`: remakes the PWA icons in src/web/public from icon.svg; commit what it writes
@@ -25,7 +25,7 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 - src/shared: Zod schemas, intents and the intent reducer; pure TypeScript (no node:*, no DOM)
 - src/server: main.ts (composition root), app.ts (Hono app, exports AppType), config.ts, db/ (connection, migrator, migrations/NNNN_name.sql), middleware/, features/
 - src/web: the React app (Vite root, own tsconfig.json): main.tsx (creates the API client and the connectivity store, then renders the app with them and `window` in contexts), app/ (routes, wall and phone layouts, and AppUpdates, the root route that runs the service worker), data/ (Dexie, sync manager, API client, hooks), features/, components/, styles/ (index.css, and themes.css, which holds every color), public/ (icon.svg and the icons made from it)
-- tests/e2e: Playwright
+- tests/e2e: Playwright, configured by playwright.config.ts at the root, with its own tsconfig.json (DOM types, for page.evaluate): start-server.ts (the test server's launcher), test-server.ts (its port and test login), fixtures.ts (the page guard) and guard.spec.ts (its tests), page-checks.ts, and the specs. A spec runs in every project unless its name ends in wall.spec.ts (the wall only) or phone.spec.ts (the phones only)
 - deploy/: host update scripts
 
 ## How we work
@@ -71,5 +71,11 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 - vite.config.ts reads the manifest's theme and background colors from the default theme's --surface in themes.css, so no color is named twice.
 - The icons in src/web/public are generated and committed, so no build needs the generator. Edit icon.svg, keep its mark inside the middle 80% (the maskable safe zone), then run `npm run icons` and look at the maskable and Apple PNGs.
 - `npm audit` reports 4 moderate findings in glob and minimatch, which workbox-build runs at build time on our own files; `npm audit --audit-level=high` passes. Never run `npm audit fix --force`: it downgrades vite-plugin-pwa to 1.1.0, which doesn't support Vite 8.
+- `npm run e2e` always starts its own server (`reuseExistingServer: false`) on port 8181, never 8080, which the dev server holds, as the container will from step 1.8. A taken port stops the run with "is already used". The server's output is hidden; `DEBUG=pw:webserver` shows it.
+- tests/e2e/start-server.ts deletes e2e-data/, a folder it names from its own location, at the start of each run, then sets NODE_ENV, DATA_DIR, PORT and ALLOWED_USERS, removes DEV_USER and HOST, and imports main.ts. Never take that path from the environment or an argument, and never clean up at the end instead: Playwright kills the server outright (taskkill /T /F on Windows), and globalTeardown runs while it still has the database open. Playwright also loads its config again in every worker, so playwright.config.ts never makes or deletes files.
+- Specs import test and expect from tests/e2e/fixtures.ts, never from @playwright/test, and ESLint enforces it. Its automatic guard fails a test whose pages log a console error, throw an uncaught error or break the Content Security Policy. A test that causes one on purpose calls `expectProblem(pattern)` first, and fails if that problem never happens. Problems read `console error at <url>: <text>`, `uncaught error: <message>` and `policy violation: <directive> blocked <what>`; warnings pass. guard.spec.ts tests the guard itself; the list reporter prints a cross beside its `test.fail()` test even when it fails as expected.
+- No test is skipped in WebKit, but WebKit shows any non-HTML navigation, such as JSON from /api, in a `<pre>` of its own with a style attribute, which the Content Security Policy blocks. So a WebKit test that navigates to JSON expects the style-src-attr violation and the "Refused to apply a stylesheet" console error, as service-worker.spec.ts does. Offline, WebKit reports a failed request as "WebKit encountered an internal error", where Chromium says net::ERR_INTERNET_DISCONNECTED.
+- The offline test fails in Chromium on any response that didn't come from the worker, because Chromium's HTTP cache answers offline for a file the precache lacks. WebKit answers the next page's script and stylesheet from its memory cache without asking the worker, so the check runs in Chromium only. In WebKit, a precache miss fails the load itself, which the guard reports.
+- The wall's full-screen card scales up from 0.96 as it opens, so measure or scan it only once it covers the screen, as openPhotos in wall.spec.ts waits for.
 
 @docs/coding-standards.md

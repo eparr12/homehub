@@ -10,6 +10,8 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 const SHARED_IS_PURE = 'src/shared is pure TypeScript (ARCH-1).';
+const SPECS_USE_THE_GUARD =
+  'Import test and expect from ./fixtures.ts, whose guard fails a test on page errors and policy violations.';
 
 export default defineConfig(
   includeIgnoreFile(join(import.meta.dirname, '.gitignore')),
@@ -97,6 +99,22 @@ export default defineConfig(
               message: 'src/server never imports from src/web (ARCH-3).',
             },
           ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['tests/e2e/**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          // Both names export Playwright's test runner.
+          paths: ['@playwright/test', 'playwright/test'].map((name) => ({
+            name,
+            allowTypeImports: true,
+            message: SPECS_USE_THE_GUARD,
+          })),
         },
       ],
     },
