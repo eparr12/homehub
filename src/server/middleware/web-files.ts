@@ -1,7 +1,10 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { serveStatic } from '@hono/node-server/serve-static';
 import type { MiddlewareHandler } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { SERVER_PATH_PREFIXES } from '../../shared/server-paths.ts';
+import { problem } from './errors.ts';
 import type { RequestEnv } from './request-log.ts';
 
 /** The app shell, which every view of the web app starts from. */
@@ -19,6 +22,7 @@ const CHECK_FIRST = 'no-cache';
 // The last segment of a path that names a file: every file name in the build
 // has a ".", and no view's path does.
 const FILE_NAME = /\.[^/]*$/;
+const HTTP_RANGE_NOT_SATISFIABLE = 416;
 
 /**
  * The next() that webFiles hands serveStatic. It resolves to nothing, so
@@ -29,8 +33,7 @@ const noFile = () => Promise.resolve();
 
 /**
  * Stands in for webFiles when there's no web build, so the server answers
- * /api alone. webFiles itself never takes undefined: serveStatic without a
- * root would serve files from the root of the disk.
+ * /api alone.
  */
 export const noWebFiles: MiddlewareHandler<RequestEnv> = (_c, next) => next();
 
@@ -39,8 +42,18 @@ export const noWebFiles: MiddlewareHandler<RequestEnv> = (_c, next) => next();
  * file, and index.html for any other app path, such as /wall, so a first
  * visit works before the service worker does. A missing file gets the 404
  * problem and never index.html, and nothing under /api or /media gets either.
+ *
+ * Throws unless webDir holds index.html, and never takes undefined.
+ * serveStatic serves whatever folder it gets, and the web files need no
+ * login: with no root, '' or '/' it serves the disk, and with '.' the repo,
+ * .env and data/ included.
  */
 export function webFiles(webDir: string): MiddlewareHandler<RequestEnv> {
+  if (!existsSync(join(webDir, SHELL_FILE))) {
+    throw new Error(
+      `The folder '${webDir}' has no ${SHELL_FILE}, so it isn't a web build`,
+    );
+  }
   const serveFile = serveStatic<RequestEnv>({ root: webDir });
   const serveShell = serveStatic<RequestEnv>({
     root: webDir,
@@ -54,6 +67,7 @@ export function webFiles(webDir: string): MiddlewareHandler<RequestEnv> {
     if (!READ_METHODS.has(method) || isServerPath(path)) return next();
     const file = await serveFile(c, noFile);
     if (file instanceof Response) {
+      if (isRangePastEnd(file)) return problem(c, HTTP_RANGE_NOT_SATISFIABLE);
       file.headers.set(CACHE_CONTROL, cacheControlFor(path));
       return file;
     }
@@ -63,9 +77,19 @@ export function webFiles(webDir: string): MiddlewareHandler<RequestEnv> {
     if (FILE_NAME.test(path)) return next();
     const shell = await serveShell(c, noFile);
     if (!(shell instanceof Response)) return next();
+    if (isRangePastEnd(shell)) return problem(c, HTTP_RANGE_NOT_SATISFIABLE);
     shell.headers.set(CACHE_CONTROL, CHECK_FIRST);
     return shell;
   });
+}
+
+/**
+ * Whether serveStatic answered a Range past the end of the file, with a bare
+ * 416. It goes out as the 416 problem instead (SRV-4), which keeps the
+ * Content-Range that serveStatic set: the file's length (RFC 9110).
+ */
+function isRangePastEnd(response: Response): boolean {
+  return response.status === HTTP_RANGE_NOT_SATISFIABLE;
 }
 
 /** Whether a path is /api, /media or below one, which only the server's routes answer. */

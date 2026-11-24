@@ -155,6 +155,41 @@ describe('web files', () => {
   });
 
   it.each([
+    {
+      path: '/assets/index-Btv5KHVt.js',
+      content: WEB_FILES['assets/index-Btv5KHVt.js'],
+    },
+    { path: '/wall', content: SHELL },
+  ])(
+    'answers a Range past the end of $path with the 416 problem, uncached',
+    async ({ path, content }) => {
+      const app = await createWebApp();
+
+      const response = await app.request(path, {
+        headers: { Range: 'bytes=999999999-' },
+      });
+
+      expect({
+        status: response.status,
+        body: await readProblem(response),
+        contentRange: response.headers.get('Content-Range'),
+        cacheControl: response.headers.get('Cache-Control'),
+      }).toEqual({
+        status: 416,
+        body: {
+          type: 'about:blank',
+          title: 'Range Not Satisfiable',
+          status: 416,
+          requestId: response.headers.get('X-Request-Id'),
+        },
+        // The file's length, which a 416 carries (RFC 9110).
+        contentRange: `bytes */${String(Buffer.byteLength(content))}`,
+        cacheControl: null,
+      });
+    },
+  );
+
+  it.each([
     { case: 'an old name under /assets', path: '/assets/index-OldHash1.js' },
     { case: 'a file the build lacks', path: '/favicon.ico' },
     { case: 'a file beside the web folder', path: `/${SECRET_FILE}` },
@@ -220,4 +255,15 @@ describe('web files', () => {
 
     await expectNotFound(response);
   });
+
+  // With no root, '' or '/', serveStatic serves the disk, and with '.' the
+  // repo, .env and data/ included, to anyone: the web files need no login.
+  it.each(['', '/', '.'])(
+    "refuses the folder '%s', which holds no web build",
+    async (webDir) => {
+      await expect(createTestApp({ webDir })).rejects.toThrow(
+        'has no index.html',
+      );
+    },
+  );
 });
