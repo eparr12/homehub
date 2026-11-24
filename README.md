@@ -28,6 +28,23 @@ The server looks for dist/web when it starts, so the build comes first; a server
 
 The icons in src/web/public are made from icon.svg. After changing it, run `npm run icons` and commit the files it writes.
 
+## Run the end-to-end tests
+
+Playwright runs the production build in three projects: wall (Chromium at 1920 by 1080), iphone (WebKit, as an iPhone 17) and android (Chromium, as a Pixel 10). Download its browsers once, and again after an update to Playwright; they go to a folder outside the repo:
+
+```sh
+npx playwright install chromium webkit
+```
+
+Then:
+
+```sh
+npm run e2e                  # build, start a test server on 127.0.0.1:8181 and run every project
+npx playwright show-report   # open the last run's report, from playwright-report/
+```
+
+The test server is the real one in production mode, with a new e2e-data/ folder for each run and a made-up login as its only allowed user, so it never touches data/. It needs port 8181 free. To run one project, add its name: `npm run e2e -- --project=iphone`.
+
 ## Configure
 
 The server reads its settings from environment variables. `npm run dev` and `npm run dev:server` load them from a .env file in the repo folder, if there is one; in production, Compose will pass them in from the host's .env (build-plan step 1.8). The repo's .env is gitignored and holds only development values (SEC-1).

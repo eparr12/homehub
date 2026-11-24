@@ -226,7 +226,7 @@ npm scripts are the single entry point for people, Claude Code and CI:
 
 - Node 26 is pinned in package.json `engines`, an .nvmrc file read by CI, and the `node:26-slim` base image.
 - TypeScript stays on 6.0 for now. TypeScript 7.0 (July 2026) ships no API yet, so typescript-eslint can't run on it; Dependabot ignores TypeScript 7 until typescript-eslint supports TypeScript 7.1's new API.
-- Two TypeScript configs share tsconfig.base.json: the root tsconfig.json (server, shared, tests and tool configs, Node types, `module: nodenext`, lib es2025 plus esnext.temporal) and src/web/tsconfig.json (web and shared, DOM types, `module: preserve`, `jsx: react-jsx`). `npm run typecheck` runs `tsc --noEmit` on both.
+- Three TypeScript configs share tsconfig.base.json: the root tsconfig.json (server, shared and tool configs, Node types, `module: nodenext`, lib es2025 plus esnext.temporal), src/web/tsconfig.json (web and shared, DOM types, `module: preserve`, `jsx: react-jsx`) and tests/e2e/tsconfig.json (the Playwright tests, Node and DOM types, `module: nodenext`, lib es2025, esnext.temporal and dom). The e2e config needs DOM types because the specs run browser code in `page.evaluate`, and esnext.temporal because its launcher imports main.ts. `npm run typecheck` runs `tsc --noEmit` on all three.
 
 tsconfig.base.json:
 
@@ -247,7 +247,7 @@ tsconfig.base.json:
 }
 ```
 
-- TypeScript 6 defaults `types` to an empty list, so each config names its own: `["node"]` at the root, and `["vite/client", "node"]` in src/web, where Node types are needed only because the client imports the server's `AppType`.
+- TypeScript 6 defaults `types` to an empty list, so each config names its own: `["node"]` at the root and in tests/e2e, and `["vite/client", "node", "vite-plugin-pwa/react"]` in src/web, where Node types are needed only because the client imports the server's `AppType`.
 - ESLint (flat config) uses typescript-eslint's strict-type-checked and stylistic-type-checked presets, eslint-plugin-react-hooks, eslint-plugin-jsx-a11y and `@typescript-eslint/no-restricted-imports` for the ARCH boundaries (with `allowTypeImports` for AppType). Prettier owns formatting through eslint-config-prettier.
 - Vitest runs two projects: node (src/shared, src/server) and web (src/web, jsdom, fake-indexeddb, Testing Library).
 - Playwright runs three projects: wall (Chromium at 1920 by 1080), iPhone (WebKit) and Android (Chromium, Pixel viewport), with @axe-core/playwright for accessibility.
