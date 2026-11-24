@@ -1,4 +1,4 @@
-import { test as base, expect } from '@playwright/test';
+import { test as base, type BrowserContext, expect } from '@playwright/test';
 
 /**
  * Declares a page problem that the current test causes on purpose: the test
@@ -27,44 +27,64 @@ const REPORT_VIOLATION = 'reportPolicyViolation' satisfies keyof Window;
 export const test = base.extend<{ expectProblem: ExpectProblem }>({
   expectProblem: [
     async ({ context }, use) => {
-      const problems: string[] = [];
+      const problems = await recordProblems(context);
       const expected: RegExp[] = [];
-      context.on('console', (message) => {
-        if (message.type() !== 'error') return;
-        // A failed request reports the resource's URL, and a console.error
-        // call its script's, so a test can expect a problem from one place.
-        const { url } = message.location();
-        const source = url === '' ? '' : ` at ${url}`;
-        problems.push(`console error${source}: ${message.text()}`);
-      });
-      context.on('weberror', (webError) => {
-        problems.push(`uncaught error: ${webError.error().message}`);
-      });
-      await context.exposeFunction(REPORT_VIOLATION, (description: string) => {
-        problems.push(`policy violation: ${description}`);
-      });
-      await context.addInitScript(reportPolicyViolations);
 
       await use((pattern) => {
         expected.push(pattern);
       });
 
-      expect({
-        unexpected: problems.filter(
-          (problem) => !expected.some((pattern) => pattern.test(problem)),
-        ),
-        neverHappened: expected
-          .filter(
-            (pattern) => !problems.some((problem) => pattern.test(problem)),
-          )
-          .map(String),
-      }).toEqual({ unexpected: [], neverHappened: [] });
+      expect(compareProblems(problems, expected)).toEqual({
+        unexpected: [],
+        neverHappened: [],
+      });
     },
     { auto: true },
   ],
 });
 
 export { expect };
+
+/**
+ * Records the problems of every page in the context, from before its first
+ * page opens. The list it returns grows as problems arrive.
+ */
+async function recordProblems(
+  context: BrowserContext,
+): Promise<readonly string[]> {
+  const problems: string[] = [];
+  context.on('console', (message) => {
+    if (message.type() !== 'error') return;
+    // A failed request reports the resource's URL, and a console.error call
+    // its script's, so a test can expect a problem from one place.
+    const { url } = message.location();
+    const source = url === '' ? '' : ` at ${url}`;
+    problems.push(`console error${source}: ${message.text()}`);
+  });
+  context.on('weberror', (webError) => {
+    problems.push(`uncaught error: ${webError.error().message}`);
+  });
+  await context.exposeFunction(REPORT_VIOLATION, (description: string) => {
+    problems.push(`policy violation: ${description}`);
+  });
+  await context.addInitScript(reportPolicyViolations);
+  return problems;
+}
+
+/** The problems that no pattern expected, and the patterns that matched none. */
+function compareProblems(
+  problems: readonly string[],
+  expected: readonly RegExp[],
+): { unexpected: string[]; neverHappened: string[] } {
+  return {
+    unexpected: problems.filter(
+      (problem) => !expected.some((pattern) => pattern.test(problem)),
+    ),
+    neverHappened: expected
+      .filter((pattern) => !problems.some((problem) => pattern.test(problem)))
+      .map(String),
+  };
+}
 
 /**
  * Runs in each page before the page's own scripts. A violation is reported

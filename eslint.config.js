@@ -102,6 +102,24 @@ export default defineConfig(
     },
   },
   {
+    files: ['tests/e2e/**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@playwright/test',
+              allowTypeImports: true,
+              message:
+                'Import test and expect from ./fixtures.ts, whose guard fails a test on page errors and policy violations.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['src/**/*.{ts,tsx}'],
     ignores: ['src/server/main.ts'],
     rules: {

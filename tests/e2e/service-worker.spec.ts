@@ -2,20 +2,23 @@ import type { Page, Response } from '@playwright/test';
 import { expect, test } from './fixtures.ts';
 import { TEST_SERVER_ORIGIN } from './test-server.ts';
 
+const HEALTH_URL = RegExp.escape(`${TEST_SERVER_ORIGIN}/api/health`);
 // Offline, only the status tile's request for /api/health may fail, in
 // whichever words the browser uses: Chromium says
 // net::ERR_INTERNET_DISCONNECTED, and WebKit "WebKit encountered an internal
 // error". Any other resource that fails, such as one missing from the
 // precache, fails the test.
 const HEALTH_UNREACHABLE = new RegExp(
-  `^console error at ${RegExp.escape(`${TEST_SERVER_ORIGIN}/api/health`)}: Failed to load resource: `,
+  `^console error at ${HEALTH_URL}: Failed to load resource: `,
 );
 // WebKit shows a JSON response in a <pre> of its own with a style attribute,
 // which the server's Content Security Policy blocks. Chromium's JSON view
 // has none. Neither problem comes from the app.
 const WEBKIT_JSON_VIEW_PROBLEMS = [
   /^policy violation: style-src-attr blocked inline$/,
-  /: Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' appears in neither the style-src directive nor the default-src directive/,
+  new RegExp(
+    `^console error at ${HEALTH_URL}: Refused to apply a stylesheet because `,
+  ),
 ];
 
 test.beforeEach(async ({ page }) => {
