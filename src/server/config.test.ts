@@ -38,21 +38,21 @@ describe('parseConfig', () => {
   });
 
   it('rejects an empty DATA_DIR, naming the variable', () => {
-    const result = parseConfig({ DATA_DIR: '' });
+    const result = parseConfig({ DATA_DIR: '', ALLOWED_USERS });
 
     assert(!result.ok);
     expect(result.error).toContain('DATA_DIR');
   });
 
   it('rejects a PORT outside the TCP port range, naming the variable', () => {
-    const result = parseConfig({ PORT: '80800' });
+    const result = parseConfig({ PORT: '80800', ALLOWED_USERS });
 
     assert(!result.ok);
     expect(result.error).toContain('PORT');
   });
 
   it('rejects a HOST that is not an IPv4 address, naming the variable', () => {
-    const result = parseConfig({ HOST: 'localhost' });
+    const result = parseConfig({ HOST: 'localhost', ALLOWED_USERS });
 
     assert(!result.ok);
     expect(result.error).toContain('HOST');

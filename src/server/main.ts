@@ -28,6 +28,14 @@ if (!config.ok) {
 }
 
 const { dataDir, allowedUsers, devUser } = config.value;
+if (devUser !== undefined) {
+  // The one setting that lets a request in without a Tailscale login. Logged
+  // by its short name, because the login is an email address (SEC-7).
+  log.info(
+    { user: allowedUsers.get(devUser) },
+    'DEV_USER is on: a request without a login header counts as this user',
+  );
+}
 const backupsDir = join(dataDir, BACKUPS_FOLDER);
 // recursive creates DATA_DIR too, since backups/ sits inside it.
 mkdirSync(backupsDir, { recursive: true });
