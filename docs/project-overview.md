@@ -213,12 +213,12 @@ Photos go from a Lightroom export to the wall through one inbox folder and one p
 5. Metadata goes into SQLite, the WebP files go into the web folder, the original moves to originals, and the photo joins the rotation. A file that fails moves to failed, with the reason logged.
 6. The browser drag-and-drop upload saves into the same inbox, so there's only one processing path.
 
-The data volume on the host:
+The data volume on the host, which the server finds through DATA_DIR (/data in the container):
 
 ```text
 data/
 ├── homehub.db            # plus homehub.db-wal and homehub.db-shm
-├── backups/
+├── backups/              # pre-migration and nightly backups
 └── photos/
     ├── inbox/            # Lightroom exports and browser uploads land here
     ├── originals/        # processed originals
@@ -290,13 +290,13 @@ Deploying:
 1. A pull request merges to main.
 2. GitHub Actions builds the image and pushes ghcr.io/<you>/homehub with two tags: main and sha-<commit>. The package is public, so the host pulls without credentials.
 3. Every 5 minutes, the host's scheduled task runs `docker compose pull` and then `docker compose up -d`. Compose restarts the container only when the image changed.
-4. On start, the server backs up the database, applies any new migrations, and reports the new commit at /api/health.
+4. On start, the server applies any pending migrations, backing up the database first, and reports the new commit at /api/health.
 
-To roll back, set HOMEHUB_TAG to an older sha- tag in .env and run `docker compose up -d`. Migrations only add tables and columns (DATA-11), so the previous image still runs. There's no self-hosted CI runner: the repo is public, and a fork's pull request could run code on it.
+To roll back, set HOMEHUB_TAG to an older sha- tag in .env and run `docker compose up -d`. Migrations only add tables and columns (DATA-11), so the previous image still runs: it finds a schema newer than its own migrations, logs a warning and starts without migrating. There's no self-hosted CI runner: the repo is public, and a fork's pull request could run code on it.
 
 Backups:
 
-- Before every migration, automatically (DATA-4).
+- Before every migration, automatically, as `backups/pre-migration-v<N>-<UTC time>.db`, where N is the schema version it saves (DATA-4). A new database has nothing to save, so it isn't backed up.
 - Nightly at 3 AM, an online backup into data/backups, keeping 14 daily and 8 weekly copies.
 - Off-site from Phase 7: a weekly copy encrypted with rclone crypt to a free cloud drive. Until then, copy the backups to a second local drive. Photo originals also live in Lightroom, and the web versions can be regenerated.
 - Test a restore after any change to the backup code, and every few months anyway.

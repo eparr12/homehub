@@ -1,5 +1,19 @@
 import { defineConfig } from 'vitest/config';
 
+// Started from a path with a lowercase drive letter, such as c:\dev\homehub,
+// Vitest 5 loads two copies of its runtime and every suite fails with
+// "Vitest failed to find the current suite" (vitest-dev/vitest#11872). A root
+// setting can't fix it, because Vitest has already loaded from that path.
+// Remove this check once the issue is fixed.
+const LOWERCASE_DRIVE_LETTER = /^[a-z]:/;
+const cwd = process.cwd();
+if (process.platform === 'win32' && LOWERCASE_DRIVE_LETTER.test(cwd)) {
+  const fixedCwd = `${cwd.charAt(0).toUpperCase()}${cwd.slice(1)}`;
+  throw new Error(
+    `Vitest 5 can't run from ${cwd}, because its drive letter is lowercase (vitest-dev/vitest#11872). Run Set-Location '${fixedCwd}' (in Bash, cd '${fixedCwd.replaceAll('\\', '/')}'), then try again.`,
+  );
+}
+
 export default defineConfig({
   test: {
     projects: [

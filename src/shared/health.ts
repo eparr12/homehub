@@ -1,8 +1,11 @@
 import { z } from 'zod';
 
-/** The body of GET /api/health. */
+const statusSchema = z.enum(['ok', 'error']);
+
+/** The body of GET /api/health: 200 when every part is ok, 503 otherwise. */
 export const healthResponseSchema = z.object({
-  status: z.literal('ok'),
+  status: statusSchema,
+  database: statusSchema,
 });
 
 export type HealthResponse = z.infer<typeof healthResponseSchema>;

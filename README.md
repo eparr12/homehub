@@ -12,3 +12,5 @@ npm run check    # typecheck, lint, format check and unit tests
 ```
 
 The phone layout is at http://localhost:5173/ and the wall layout at http://localhost:5173/wall. Vite forwards /api and /media to the API server.
+
+The server keeps its SQLite database in data/homehub.db, and saves a backup in data/backups before each migration. The data/ folder is gitignored; set DATA_DIR to use another folder.

@@ -33,7 +33,7 @@ function renderRoute(path: string, fetchStub: typeof fetch): void {
 
 describe('/wall', () => {
   it('shows the server status it reads from /api/health', async () => {
-    renderRoute('/wall', serveHealth({ status: 'ok' }));
+    renderRoute('/wall', serveHealth({ status: 'ok', database: 'ok' }));
 
     await waitFor(() => {
       expect(screen.getByRole('status').textContent).toBe('Server: ok');

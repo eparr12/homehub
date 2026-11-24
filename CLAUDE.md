@@ -21,7 +21,7 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 ## Layout
 
 - src/shared: Zod schemas, intents and the intent reducer; pure TypeScript (no node:*, no DOM)
-- src/server: main.ts (composition root), app.ts (Hono app, exports AppType), config.ts, db/ (migrations), middleware/, features/
+- src/server: main.ts (composition root), app.ts (Hono app, exports AppType), config.ts, db/ (connection, migrator, migrations/NNNN_name.sql), middleware/, features/
 - src/web: the React app (Vite root, own tsconfig.json): app/, data/ (Dexie, sync manager, API client, hooks), features/, components/, styles/
 - tests/e2e: Playwright
 - deploy/: host update scripts
@@ -49,5 +49,8 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 - The server trusts Tailscale identity headers only because Tailscale Serve on the same machine is its only client: HOST defaults to 127.0.0.1 and is 0.0.0.0 only inside the container, which Compose publishes on 127.0.0.1:8080 alone (SEC-2). Never widen either binding.
 - `dependencies` holds only what the server loads at runtime, because the image installs with `npm ci --omit=dev`. Web libraries are bundled into dist/web, so they go in devDependencies.
 - The `overrides` entry in package.json lets eslint-plugin-jsx-a11y 6.10 run on ESLint 10, which it works with but doesn't declare yet. Remove it once a jsx-a11y release supports ESLint 10.
+- package.json's `allowScripts` denies better-sqlite3's install script. The package ships prebuilt binaries for Windows and Linux, but installs from the lockfile, such as `npm ci`, ignore its `"gypfile": false` and would run node-gyp, which needs Python and build tools. Never approve the script or install build tools for it.
+- Claude Code's shell starts in c:\dev\homehub, and from a lowercase drive letter Vitest 5 fails every suite (vitest-dev/vitest#11872), so vitest.config.ts stops with an error. Run `Set-Location C:\dev\homehub` (`cd C:/dev/homehub` in Bash) before `npm run test` or `npm run check`.
+- DATA_DIR defaults to data, the repo's gitignored data/ folder. The container must set DATA_DIR=/data, where Compose mounts the volume (step 1.8), or the database would live inside the container and be lost with it.
 
 @docs/coding-standards.md

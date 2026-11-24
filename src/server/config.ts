@@ -6,6 +6,9 @@ import { z } from 'zod';
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 8080;
 const MAX_TCP_PORT = 65_535;
+// The repo's gitignored data/ folder in development. The container sets
+// DATA_DIR=/data, where Compose mounts the volume.
+const DEFAULT_DATA_DIR = 'data';
 
 const configSchema = z
   .object({
@@ -16,8 +19,13 @@ const configSchema = z
       .min(1)
       .max(MAX_TCP_PORT)
       .default(DEFAULT_PORT),
+    DATA_DIR: z.string().min(1).default(DEFAULT_DATA_DIR),
   })
-  .transform((env) => ({ host: env.HOST, port: env.PORT }));
+  .transform((env) => ({
+    host: env.HOST,
+    port: env.PORT,
+    dataDir: env.DATA_DIR,
+  }));
 
 export type Config = z.infer<typeof configSchema>;
 
