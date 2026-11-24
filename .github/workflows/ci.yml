@@ -17,7 +17,9 @@ jobs:
     # Not ubuntu-latest: that label moves on GitHub's schedule, which would
     # change the system we test on a day nobody chose.
     runs-on: ubuntu-26.04
-    timeout-minutes: 15
+    # About three times the job's run time (34 s on its first run), so a hung
+    # step fails fast. Raise it as the job grows.
+    timeout-minutes: 2
     steps:
       - uses: actions/checkout@v7
         with:
@@ -35,7 +37,8 @@ jobs:
 
   e2e:
     runs-on: ubuntu-26.04
-    timeout-minutes: 30
+    # About three times the job's run time (1 min 16 s on its first run).
+    timeout-minutes: 4
     steps:
       - uses: actions/checkout@v7
         with:

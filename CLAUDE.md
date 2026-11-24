@@ -81,5 +81,8 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 - The offline test fails in Chromium on any response that didn't come from the worker, because Chromium's HTTP cache answers offline for a file the precache lacks. WebKit answers the next page's script and stylesheet from its memory cache without asking the worker, so the check runs in Chromium only. In WebKit, a precache miss fails the load itself, which the guard reports.
 - The wall's full-screen card scales up from 0.96 as it opens, so measure or scan it only once it covers the screen, as openPhotos in wall.spec.ts waits for.
 - A failed e2e run uploads playwright-report/ as an artifact kept 14 days, with each failed test's trace (page snapshots and every request's headers), and anyone signed in to GitHub can download it. So test data stays made up: no real names, logins or photos (GIT-7).
+- Each CI job's timeout-minutes is about three times its run time: 2 for check and 4 for e2e, from the first runs' 34 s and 1 min 16 s. A job that outgrows it is cancelled, not failed, so e2e then uploads no report; raise the timeout in the pull request that makes the job longer.
+- Both CI jobs restore one npm cache, keyed on package-lock.json. After the lockfile changes, both miss it, and the job that finishes second logs "Failed to save: Unable to reserve cache ... another job may be creating this cache", which is harmless.
+- CI's coverage table lists every file. Under Claude Code, Vitest leaves out the fully covered ones and adds a summary, because its std-env dependency detects an agent from the environment, so a local table looks shorter than CI's.
 
 @docs/coding-standards.md
