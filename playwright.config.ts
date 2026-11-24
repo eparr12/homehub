@@ -4,8 +4,11 @@ import {
   TEST_SERVER_ORIGIN,
 } from './tests/e2e/test-server.ts';
 
-// Run by every project, on top of each layout's own spec file.
-const EVERY_PROJECT = ['app.spec.ts', 'service-worker.spec.ts'];
+// A spec runs in every project unless its name ends in wall.spec.ts, which
+// only the wall runs, or phone.spec.ts, which only the phones run. A new spec
+// can't miss every project by being left out of a list.
+const WALL_SPECS = /wall\.spec\.ts$/;
+const PHONE_SPECS = /phone\.spec\.ts$/;
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -29,7 +32,7 @@ export default defineConfig({
   projects: [
     {
       name: 'wall',
-      testMatch: ['wall.spec.ts', ...EVERY_PROJECT],
+      testIgnore: PHONE_SPECS,
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
@@ -38,12 +41,12 @@ export default defineConfig({
     },
     {
       name: 'iphone',
-      testMatch: ['phone.spec.ts', ...EVERY_PROJECT],
+      testIgnore: WALL_SPECS,
       use: devices['iPhone 17'],
     },
     {
       name: 'android',
-      testMatch: ['phone.spec.ts', ...EVERY_PROJECT],
+      testIgnore: WALL_SPECS,
       use: devices['Pixel 10'],
     },
   ],

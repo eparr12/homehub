@@ -59,9 +59,20 @@ test('leaves a navigation to /api/health to the server', async ({
 test('loads the app offline after one visit', async ({
   page,
   context,
+  browserName,
   expectProblem,
 }) => {
   expectProblem(HEALTH_UNREACHABLE);
+  // Chromium's HTTP cache answers offline for a file the precache lacks, as
+  // it would until it evicts the file, so only the worker's answers prove
+  // that the precache holds the app shell (WEB-12). Checked in Chromium
+  // only: WebKit answers the next page's script and stylesheet from its
+  // memory cache without asking the worker, and says so, while a precache
+  // miss there fails the load, which the guard reports.
+  const notFromWorker: string[] = [];
+  page.on('response', (response) => {
+    if (!response.fromServiceWorker()) notFromWorker.push(response.url());
+  });
 
   await context.setOffline(true);
   await page.reload();
@@ -71,6 +82,7 @@ test('loads the app offline after one visit', async ({
   await expect(
     page.getByRole('region', { name: 'Status' }).getByRole('status'),
   ).toContainText(["Can't reach the server", 'Offline']);
+  if (browserName === 'chromium') expect(notFromWorker).toEqual([]);
 });
 
 /** A navigation's response, which only about:blank or a hash change lacks. */
