@@ -353,6 +353,8 @@ in docs/project-overview.md:
 Add Playwright per the Tooling section of docs/coding-standards.md:
 - projects: wall (Chromium, 1920x1080), iphone (WebKit, an iPhone device
   profile) and android (Chromium, a Pixel profile)
+- the server serves dist/web, with long caching for hashed assets and no
+  caching for index.html and the service worker
 - webServer: build the app, then start the server in production mode with
   a temporary DATA_DIR and ALLOWED_USERS set to a test login; tests send
   the Tailscale-User-Login header through extraHTTPHeaders, so the real
@@ -424,8 +426,6 @@ Add the container build and pull-based deploy per docs/project-overview.md
   src/server/main.ts; HEALTHCHECK using node's fetch against /api/health;
   a GIT_SHA build argument reported as the version
 - .dockerignore that keeps .env, data and node_modules out of the image
-- the server serves dist/web, with long caching for hashed assets and no
-  caching for index.html and the service worker
 - compose.yaml: image ghcr.io/<owner>/homehub:${HOMEHUB_TAG:-main}, ports
   127.0.0.1:8080:8080, ./data:/data, env_file .env, restart unless-stopped,
   cap_drop ALL, no-new-privileges, stop_grace_period 10s

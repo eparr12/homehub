@@ -87,7 +87,7 @@ flowchart TB
     phones["Phones<br/>React PWA, Dexie outbox"]
     subgraph host["Host: the desktop now, the NAS later"]
         serve["Tailscale Serve<br/>HTTPS and identity headers"]
-        server["HomeHub server in Docker<br/>Node 26 and Hono: sync, themes, photos, SSE"]
+        server["HomeHub server in Docker<br/>Node 26 and Hono: web app, sync, themes, photos, SSE"]
         db[("SQLite file<br/>items, versions, rules, photo metadata")]
         inbox["Photo inbox folder<br/>Lightroom exports and uploads"]
         media["Photo web folder<br/>WebP versions"]
@@ -102,6 +102,13 @@ flowchart TB
 ```
 
 Phones and the wall only ever talk to Tailscale Serve on the host, and Serve is the only thing that talks to the server.
+
+The same server serves the web app: the production build that Vite writes to dist/web, with the same security headers as the API.
+
+- Files under /assets have a hash of their content in their names, so they're cached for a year as immutable.
+- Every other file keeps its name from build to build, such as index.html, sw.js and the manifest, so it goes out with no-cache, and the browser checks for a new copy each time.
+- Any other app path, such as /wall, gets index.html, so a first visit works before the service worker does.
+- A missing file gets the 404 problem, never index.html, because an installed app that gets a page in place of a script breaks and stays broken. Nothing under /api or /media gets a file or index.html.
 
 | Layer | Choice | Why |
 | --- | --- | --- |
@@ -328,7 +335,7 @@ homehub/
 │   │   ├── app.ts             # the Hono app; exports AppType
 │   │   ├── config.ts
 │   │   ├── db/                # connection, migrator, migrations/*.sql, backups
-│   │   ├── middleware/        # identity, errors, request IDs, logging
+│   │   ├── middleware/        # identity, errors, request IDs, logging, web files
 │   │   └── features/          # grocery, shopping, photos, themes, status
 │   └── web/                   # React PWA (Vite root, its own tsconfig.json)
 │       ├── app/               # router, wall and phone layouts, error boundaries, app updates

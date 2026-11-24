@@ -12,6 +12,7 @@ import { checkDatabase } from './db/connection.ts';
 import { handleError, handleNotFound } from './middleware/errors.ts';
 import { identity } from './middleware/identity.ts';
 import { type RequestEnv, requestLog } from './middleware/request-log.ts';
+import { noWebFiles, webFiles } from './middleware/web-files.ts';
 
 const HTTP_OK = 200;
 const HTTP_SERVICE_UNAVAILABLE = 503;
@@ -33,10 +34,18 @@ export interface AppDependencies {
   readonly allowedUsers: AllowedUsers;
   /** The login that a request without a login header counts as, in development only. */
   readonly devUser?: string | undefined;
+  /** The production web build to serve, or none to answer /api alone. */
+  readonly webDir?: string | undefined;
 }
 
 /** Builds the HomeHub Hono app; main.ts serves it and tests call app.request(). */
-export function createApp({ db, log, allowedUsers, devUser }: AppDependencies) {
+export function createApp({
+  db,
+  log,
+  allowedUsers,
+  devUser,
+  webDir,
+}: AppDependencies) {
   // Hono runs handlers in the order they're added, so the order is the
   // security boundary: a route added above identity would skip it.
   return (
@@ -80,6 +89,9 @@ export function createApp({ db, log, allowedUsers, devUser }: AppDependencies) {
         const me: MeResponse = { shortName, displayName };
         return c.json(me, HTTP_OK);
       })
+      // Last, below every /api route, and open: the web app's files hold no
+      // data until the app calls /api, which needs an identity.
+      .use(webDir === undefined ? noWebFiles : webFiles(webDir))
   );
 }
 
