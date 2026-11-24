@@ -5,6 +5,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
+import { BrowserPageContext } from './app/AppUpdates.tsx';
 import { routes } from './app/routes.tsx';
 import { ApiClientContext, createApiClient } from './data/api-client.ts';
 import {
@@ -24,13 +25,15 @@ const apiClient = createApiClient(
 
 createRoot(rootElement).render(
   <StrictMode>
-    <ConnectivityContext value={connectivity}>
-      <ApiClientContext value={apiClient}>
-        {/* Transform animations stop for anyone who prefers reduced motion (WEB-8). */}
-        <MotionConfig reducedMotion="user">
-          <RouterProvider router={createBrowserRouter(routes)} />
-        </MotionConfig>
-      </ApiClientContext>
-    </ConnectivityContext>
+    <BrowserPageContext value={window}>
+      <ConnectivityContext value={connectivity}>
+        <ApiClientContext value={apiClient}>
+          {/* Transform animations stop for anyone who prefers reduced motion (WEB-8). */}
+          <MotionConfig reducedMotion="user">
+            <RouterProvider router={createBrowserRouter(routes)} />
+          </MotionConfig>
+        </ApiClientContext>
+      </ConnectivityContext>
+    </BrowserPageContext>
   </StrictMode>,
 );

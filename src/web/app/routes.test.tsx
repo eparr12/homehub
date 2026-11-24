@@ -1,13 +1,29 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { createMemoryRouter, type RouteObject } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { RegisterSWOptions } from 'virtual:pwa-register/react';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type Mock,
+  vi,
+} from 'vitest';
 import type { HealthResponse } from '../../shared/health.ts';
 import { ApiClientContext, createApiClient } from '../data/api-client.ts';
 import {
   ConnectivityContext,
   createConnectivity,
 } from '../data/connectivity.ts';
+import {
+  AppUpdates,
+  type BrowserPage,
+  BrowserPageContext,
+  UPDATE_CHECK_MS,
+} from './AppUpdates.tsx';
+import { WALL_PATH } from './paths.ts';
 import { PhoneLayout } from './PhoneLayout.tsx';
 import { routes } from './routes.tsx';
 import { ViewError } from './ViewError.tsx';
@@ -15,6 +31,43 @@ import { ViewError } from './ViewError.tsx';
 const TEST_ORIGIN = 'http://homehub.test';
 const HEALTHY: HealthResponse = { status: 'ok', database: 'ok' };
 const WALL_CARDS = ['Photos', 'Countdown', 'Groceries', 'Status'];
+const SW_URL = '/sw.js';
+
+/** What the fake useRegisterSW below keeps, so a test can act as the plugin. */
+interface FakeRegisterSW {
+  options: RegisterSWOptions;
+  setNeedRefresh: (isReady: boolean) => void;
+  readonly updateServiceWorker: Mock<() => Promise<void>>;
+}
+
+// Under Vitest the plugin serves a stub of virtual:pwa-register/react that
+// never reports a new version, so this fake replaces it: it keeps what
+// AppUpdates passes in, and the helpers below act as the plugin would.
+const pwa = vi.hoisted((): FakeRegisterSW => ({
+  options: {},
+  setNeedRefresh: () => undefined,
+  updateServiceWorker: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock(import('virtual:pwa-register/react'), async () => {
+  const { useEffect, useState } = await import('react');
+  return {
+    useRegisterSW(options = {}) {
+      const needRefresh = useState(false);
+      const offlineReady = useState(false);
+      const [, setNeedRefresh] = needRefresh;
+      useEffect(() => {
+        pwa.options = options;
+        pwa.setNeedRefresh = setNeedRefresh;
+      });
+      return {
+        needRefresh,
+        offlineReady,
+        updateServiceWorker: pwa.updateServiceWorker,
+      };
+    },
+  };
+});
 
 const answerHealthy: typeof fetch = () =>
   Promise.resolve(Response.json(HEALTHY));
@@ -28,10 +81,38 @@ async function settle(): Promise<void> {
   await act(() => vi.advanceTimersByTimeAsync(0));
 }
 
+/** A stand-in for window: the service worker container, reload and visibility. */
+function createFakePage({ hasController = true } = {}) {
+  const controller: object | null = hasController ? {} : null;
+  const serviceWorker = Object.assign(new EventTarget(), { controller });
+  const visibility: { visibilityState: DocumentVisibilityState } = {
+    visibilityState: 'visible',
+  };
+  const fakeDocument = Object.assign(new EventTarget(), visibility);
+  const reload = vi.fn();
+  const page: BrowserPage = {
+    navigator: { serviceWorker },
+    location: { reload },
+    document: fakeDocument,
+  };
+  return {
+    page,
+    reload,
+    /** What the browser does once the new worker controls the page. */
+    takeControl: () => {
+      serviceWorker.dispatchEvent(new Event('controllerchange'));
+    },
+    setVisibility: (state: DocumentVisibilityState) => {
+      fakeDocument.visibilityState = state;
+      fakeDocument.dispatchEvent(new Event('visibilitychange'));
+    },
+  };
+}
+
 /** Renders `path` the way main.tsx wires the app, then settles. */
 async function renderRoute(
   path: string,
-  { isOnline = true, routeTree = routes } = {},
+  { isOnline = true, routeTree = routes, page = createFakePage().page } = {},
 ) {
   const connectivity = createConnectivity({
     navigator: { onLine: isOnline },
@@ -42,15 +123,38 @@ async function renderRoute(
     connectivity.trackFetch(answerHealthy),
   );
   render(
-    <ConnectivityContext value={connectivity}>
-      <ApiClientContext value={client}>
-        <RouterProvider
-          router={createMemoryRouter(routeTree, { initialEntries: [path] })}
-        />
-      </ApiClientContext>
-    </ConnectivityContext>,
+    <BrowserPageContext value={page}>
+      <ConnectivityContext value={connectivity}>
+        <ApiClientContext value={client}>
+          <RouterProvider
+            router={createMemoryRouter(routeTree, { initialEntries: [path] })}
+          />
+        </ApiClientContext>
+      </ConnectivityContext>
+    </BrowserPageContext>,
   );
   await settle();
+}
+
+/** What the plugin does when it finds a new worker waiting. */
+function reportNewVersion(): void {
+  act(() => {
+    pwa.setNeedRefresh(true);
+    pwa.options.onNeedRefresh?.();
+  });
+}
+
+/** What the plugin does once the browser has registered the worker. */
+function finishRegistration(registration: {
+  update: () => Promise<unknown>;
+}): void {
+  act(() => {
+    // AppUpdates uses only update().
+    pwa.options.onRegisteredSW?.(
+      SW_URL,
+      registration as unknown as ServiceWorkerRegistration,
+    );
+  });
 }
 
 /** The first route in `tree` that `matches` picks, searched depth first. */
@@ -66,8 +170,24 @@ function findRoute(
   return undefined;
 }
 
+/** `tree` with the route at `path` swapped for one that throws. */
+function withBrokenRoute(
+  path: string,
+  tree: readonly RouteObject[] = routes,
+): RouteObject[] {
+  return tree.map((route): RouteObject => {
+    if (route.index === true) return route;
+    if (route.path === path) return { ...route, Component: Broken };
+    if (route.children === undefined) return route;
+    return { ...route, children: withBrokenRoute(path, route.children) };
+  });
+}
+
+const reloadButton = () => screen.queryByRole('button', { name: 'Reload' });
+
 beforeEach(() => {
   vi.useFakeTimers();
+  pwa.updateServiceWorker.mockClear();
 });
 
 afterEach(() => {
@@ -127,9 +247,15 @@ describe('the phone layout', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const routeTree: RouteObject[] = [
       {
-        Component: PhoneLayout,
+        // The layout's update prompt reads what AppUpdates provides.
+        Component: AppUpdates,
         children: [
-          { index: true, Component: Broken, ErrorBoundary: ViewError },
+          {
+            Component: PhoneLayout,
+            children: [
+              { index: true, Component: Broken, ErrorBoundary: ViewError },
+            ],
+          },
         ],
       },
     ];
@@ -191,5 +317,127 @@ describe('an unknown path', () => {
     const heading = screen.getByRole('heading');
 
     expect(heading.textContent).toBe('Page not found');
+  });
+});
+
+describe('a new version', () => {
+  it('shows the Reload prompt on the phone only once one is ready', async () => {
+    const fake = createFakePage();
+    await renderRoute('/', { page: fake.page });
+    const hadPrompt = reloadButton() !== null;
+
+    reportNewVersion();
+
+    expect({
+      hadPrompt,
+      hasPrompt: reloadButton() !== null,
+      // The old version keeps running until Reload is tapped.
+      toldWorker: pwa.updateServiceWorker.mock.calls.length,
+      reloads: fake.reload.mock.calls.length,
+    }).toEqual({
+      hadPrompt: false,
+      hasPrompt: true,
+      toldWorker: 0,
+      reloads: 0,
+    });
+  });
+
+  it('reloads the phone after Reload, once the new worker takes control', async () => {
+    const fake = createFakePage();
+    await renderRoute('/', { page: fake.page });
+    reportNewVersion();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reload' }));
+    const reloadsBeforeControl = fake.reload.mock.calls.length;
+    fake.takeControl();
+
+    expect({
+      toldWorker: pwa.updateServiceWorker.mock.calls.length,
+      reloadsBeforeControl,
+      reloads: fake.reload.mock.calls.length,
+    }).toEqual({ toldWorker: 1, reloadsBeforeControl: 0, reloads: 1 });
+  });
+
+  // Nothing controls a page from a device's first visit, so no
+  // controllerchange would come.
+  it('reloads at once after Reload when no worker controls the page', async () => {
+    const fake = createFakePage({ hasController: false });
+    await renderRoute('/', { page: fake.page });
+    reportNewVersion();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reload' }));
+
+    expect(fake.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('reloads the wall without a prompt, once the new worker takes control', async () => {
+    const fake = createFakePage();
+    await renderRoute(WALL_PATH, { page: fake.page });
+
+    reportNewVersion();
+    fake.takeControl();
+
+    expect({
+      hasPrompt: reloadButton() !== null,
+      reloads: fake.reload.mock.calls.length,
+    }).toEqual({ hasPrompt: false, reloads: 1 });
+  });
+
+  it('still reloads the wall after the wall page throws', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const fake = createFakePage();
+    await renderRoute(WALL_PATH, {
+      page: fake.page,
+      routeTree: withBrokenRoute(WALL_PATH),
+    });
+
+    reportNewVersion();
+    fake.takeControl();
+
+    expect({
+      heading: screen.getByRole('heading').textContent,
+      reloads: fake.reload.mock.calls.length,
+    }).toEqual({ heading: 'Something went wrong', reloads: 1 });
+  });
+
+  it('asks the server for one every hour', async () => {
+    const registration = { update: vi.fn(() => Promise.resolve()) };
+    await renderRoute(WALL_PATH);
+    finishRegistration(registration);
+
+    await act(() => vi.advanceTimersByTimeAsync(2 * UPDATE_CHECK_MS));
+
+    expect(registration.update).toHaveBeenCalledTimes(2);
+  });
+
+  it('asks the server for one when the page becomes visible, not when it hides', async () => {
+    const fake = createFakePage();
+    const registration = { update: vi.fn(() => Promise.resolve()) };
+    await renderRoute('/', { page: fake.page });
+    finishRegistration(registration);
+
+    fake.setVisibility('hidden');
+    fake.setVisibility('visible');
+
+    expect(registration.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps asking after a check that gets no answer, and warns', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const registration = {
+      update: vi
+        .fn<() => Promise<void>>()
+        .mockRejectedValueOnce(new TypeError('Failed to update'))
+        .mockResolvedValue(undefined),
+    };
+    await renderRoute(WALL_PATH);
+    finishRegistration(registration);
+
+    await act(() => vi.advanceTimersByTimeAsync(2 * UPDATE_CHECK_MS));
+
+    expect({
+      checks: registration.update.mock.calls.length,
+      warnings: warn.mock.calls.length,
+    }).toEqual({ checks: 2, warnings: 1 });
   });
 });

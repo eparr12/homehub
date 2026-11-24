@@ -273,7 +273,7 @@ Until the mini PC arrives, the UPERFECT is a second screen on the desktop, runni
 - Cabling: if the mini PC has USB-C with DisplayPort output, one cable carries picture and touch. Otherwise use HDMI plus a USB cable for touch.
 - CSS: touch-action: manipulation and overscroll-behavior: none on the html element, to stop double-tap zoom, pull-to-refresh and bounce.
 - Startup and recovery: sign in automatically, start the browser at boot, and relaunch it if it crashes.
-- Maintenance: schedule OS updates inside the 12 AM to 6 AM sleep window, and reload the page nightly to pick up new deploys.
+- Maintenance: schedule OS updates inside the 12 AM to 6 AM sleep window, and reload the page nightly, a backstop for the app's own hourly check for new deploys.
 - Night mode: the app shows a black screen at midnight that wakes on touch, and the OS turns the display off until 6 AM. The exact commands depend on the mini PC's OS.
 - Access: the mini PC joins the tailnet signed in as me, with key expiry off, and I fix it remotely over Tailscale SSH on Linux or Remote Desktop on Windows Pro.
 
@@ -291,6 +291,7 @@ Deploying:
 2. GitHub Actions builds the image and pushes ghcr.io/<you>/homehub with two tags: main and sha-<commit>. The package is public, so the host pulls without credentials.
 3. Every 5 minutes, the host's scheduled task runs `docker compose pull` and then `docker compose up -d`. Compose restarts the container only when the image changed.
 4. On start, the server applies any pending migrations, backing up the database first, and reports the new commit at /api/health.
+5. Open pages pick up the new build. Each asks for a new service worker every hour and whenever it becomes visible. The wall reloads into it at once; a phone shows a "new version" prompt and keeps the old version running until Reload is tapped.
 
 To roll back, set HOMEHUB_TAG to an older sha- tag in .env and run `docker compose up -d`. Migrations only add tables and columns (DATA-11), so the previous image still runs: it finds a schema newer than its own migrations, logs a warning and starts without migrating. There's no self-hosted CI runner: the repo is public, and a fork's pull request could run code on it.
 
@@ -330,10 +331,11 @@ homehub/
 │   │   ├── middleware/        # identity, errors, request IDs, logging
 │   │   └── features/          # grocery, shopping, photos, themes, status
 │   └── web/                   # React PWA (Vite root, its own tsconfig.json)
-│       ├── app/               # router, wall and phone layouts, error boundaries
+│       ├── app/               # router, wall and phone layouts, error boundaries, app updates
 │       ├── data/              # Dexie database, sync manager, API client, live-query hooks
 │       ├── features/          # grocery, photos, themes, shopping, status
 │       ├── components/
+│       ├── public/            # icon.svg and the PWA icons that npm run icons makes from it
 │       └── styles/            # index.css (Tailwind) and themes.css, the only file that names a color
 ├── tests/e2e/                 # Playwright
 ├── deploy/                    # Windows update script; NAS systemd units
@@ -450,7 +452,7 @@ Everything HomeHub needs is free; the only paid tool is the Claude plan I alread
 | Electricity | The desktop stays on until the NAS takes over | One more reason to finish the NAS |
 | Claude Code | Uses my existing Claude plan | Not a HomeHub running cost |
 
-Every dependency that ships in the image uses MIT, Apache-2.0 or a similarly permissive license (GEN-9); keep it that way. Two build- and test-time tools that never ship use MPL-2.0: lightningcss (through Tailwind and Vite) and axe-core (through eslint-plugin-jsx-a11y).
+Every dependency that ships in the image uses MIT, Apache-2.0 or a similarly permissive license (GEN-9); keep it that way. Some build- and test-time tools that never ship use weak copyleft licenses: lightningcss (through Tailwind and Vite), axe-core (through eslint-plugin-jsx-a11y) and ico-endec (through @vite-pwa/assets-generator) use MPL-2.0, and the libvips binaries in sharp (also through the generator) use LGPL-3.0-or-later.
 
 ## Sources
 

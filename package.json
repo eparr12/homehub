@@ -11,6 +11,8 @@
     "dev:server": "node --env-file-if-exists=.env --watch src/server/main.ts",
     "dev:web": "vite",
     "build": "vite build",
+    "preview": "vite preview",
+    "icons": "pwa-assets-generator",
     "start": "node src/server/main.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p src/web/tsconfig.json",
     "lint": "eslint --max-warnings 0 .",
@@ -40,6 +42,7 @@
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@vite-pwa/assets-generator": "^2.0.0",
     "@vitejs/plugin-react": "^6.3.0",
     "concurrently": "^10.0.7",
     "eslint": "^10.15.0",
@@ -57,6 +60,7 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.74.0",
     "vite": "^8.3.8",
+    "vite-plugin-pwa": "^2.0.0",
     "vitest": "^5.1.1"
   },
   "allowScripts": {

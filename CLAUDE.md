@@ -16,13 +16,15 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 - `npm run format`: Prettier rewrites code to the style `npm run check` expects (Markdown is left alone)
 - `npm run e2e`: Playwright; run it when UI, PWA or sync code changed
 - `npm run build`: production web build into dist/web
+- `npm run preview`: serves dist/web on http://localhost:4173 with /api and /media proxied, to try the service worker; it doesn't send the server's security headers
+- `npm run icons`: remakes the PWA icons in src/web/public from icon.svg; commit what it writes
 - `docker build -t homehub:local .`: build the production image locally (CI builds and pushes the real one)
 
 ## Layout
 
 - src/shared: Zod schemas, intents and the intent reducer; pure TypeScript (no node:*, no DOM)
 - src/server: main.ts (composition root), app.ts (Hono app, exports AppType), config.ts, db/ (connection, migrator, migrations/NNNN_name.sql), middleware/, features/
-- src/web: the React app (Vite root, own tsconfig.json): main.tsx (creates the API client and the connectivity store, then renders), app/ (routes, wall and phone layouts), data/ (Dexie, sync manager, API client, hooks), features/, components/, styles/ (index.css, and themes.css, which holds every color)
+- src/web: the React app (Vite root, own tsconfig.json): main.tsx (creates the API client and the connectivity store, then renders the app with them and `window` in contexts), app/ (routes, wall and phone layouts, and AppUpdates, the root route that runs the service worker), data/ (Dexie, sync manager, API client, hooks), features/, components/, styles/ (index.css, and themes.css, which holds every color), public/ (icon.svg and the icons made from it)
 - tests/e2e: Playwright
 - deploy/: host update scripts
 
@@ -59,5 +61,12 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 - The server's Content Security Policy allows only the app's own origin (SEC-8). It blocks eval and `new Function`, inline scripts, `<style>` elements, style attributes written into markup, and data: URLs. So Vite's `assetsInlineLimit` is 0, and Motion's `AnimatePresence mode="popLayout"`, which injects a `<style>`, is off-limits. Styles that React or Motion set through the DOM, such as the style prop, pass.
 - Testing Library's findBy* and waitFor hang under Vitest's fake timers, because they wait on a setTimeout that only Jest's clock advances. Settle with `await act(() => vi.advanceTimersByTimeAsync(ms))`, then query with getBy*. A test file that runs Motion animations installs fake timers once, in beforeAll: jsdom and Motion each keep one frame loop for the page, and a clock swapped out between tests leaves later tests without frames.
 - DATA_DIR defaults to data, the repo's gitignored data/ folder. The container must set DATA_DIR=/data, where Compose mounts the volume (step 1.8), or the database would live inside the container and be lost with it.
+- The service worker runs only in a production build: devOptions stay off, so `npm run dev` never registers one. Try it with `npm run build`, then `npm run preview`.
+- AppUpdates, the root route's component, registers the worker and must stay mounted when a route throws. So RouteError sits twice: on the root, for a path with no route, and on the pathless child around the layouts, for a layout that throws. With only the root's, a crash unmounts AppUpdates; with only the child's, an unknown path shows React Router's default error page.
+- Never count on vite-plugin-pwa to reload into a new version: its reload covers only a page that a worker controlled when it loaded, and nothing claims a page from a first visit. applyUpdate in AppUpdates.tsx reloads at once when `navigator.serviceWorker.controller` is null, and otherwise on controllerchange after `updateServiceWorker()`.
+- Under Vitest the plugin serves a stub of `virtual:pwa-register/react` that never reports a new version, so tests replace it with vi.mock; routes.test.tsx has a fake that lets a test act as the plugin.
+- vite.config.ts reads the manifest's theme and background colors from the default theme's --surface in themes.css, so no color is named twice.
+- The icons in src/web/public are generated and committed, so no build needs the generator. Edit icon.svg, keep its mark inside the middle 80% (the maskable safe zone), then run `npm run icons` and look at the maskable and Apple PNGs.
+- `npm audit` reports 4 moderate findings in glob and minimatch, which workbox-build runs at build time on our own files; `npm audit --audit-level=high` passes. Never run `npm audit fix --force`: it downgrades vite-plugin-pwa to 1.1.0, which doesn't support Vite 8.
 
 @docs/coding-standards.md
