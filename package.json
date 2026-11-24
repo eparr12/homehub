@@ -11,7 +11,6 @@
     "dev:server": "node --env-file-if-exists=.env --watch src/server/main.ts",
     "dev:web": "vite",
     "build": "vite build",
-    "preview": "vite preview",
     "icons": "pwa-assets-generator",
     "start": "node src/server/main.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p src/web/tsconfig.json",

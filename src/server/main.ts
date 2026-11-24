@@ -1,16 +1,21 @@
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { serve } from '@hono/node-server';
 import { pino } from 'pino';
 import { createApp } from './app.ts';
 import { parseConfig } from './config.ts';
 import { openDatabase } from './db/connection.ts';
 import { MIGRATIONS_DIR, migrate } from './db/migrator.ts';
+import { SHELL_FILE } from './middleware/web-files.ts';
 
 // Docker sends SIGKILL 10 s after SIGTERM, so shutdown has to finish first (SRV-8).
 const SHUTDOWN_TIMEOUT_MS = 8_000;
 const DATABASE_FILE = 'homehub.db';
 const BACKUPS_FOLDER = 'backups';
+// Found from this file, as migrator.ts finds its migrations: dist/web beside
+// src, where `npm run build` writes the web app.
+const WEB_BUILD_DIR = fileURLToPath(new URL('../../dist/web', import.meta.url));
 
 const log = pino();
 
@@ -49,9 +54,18 @@ await migrate(db, {
   log,
 });
 
+// Only a finished build: serveStatic logs an error for a folder that isn't
+// there, and before the first build `npm run dev` serves the app from Vite.
+const webDir = existsSync(join(WEB_BUILD_DIR, SHELL_FILE))
+  ? WEB_BUILD_DIR
+  : undefined;
+if (webDir === undefined) {
+  log.info('no web build in dist/web, so the server answers /api alone');
+}
+
 const server = serve(
   {
-    fetch: createApp({ db, log, allowedUsers, devUser }).fetch,
+    fetch: createApp({ db, log, allowedUsers, devUser, webDir }).fetch,
     hostname: config.value.host,
     port: config.value.port,
   },

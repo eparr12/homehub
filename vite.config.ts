@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { SERVER_PATH_PREFIXES } from './src/shared/server-paths.ts';
 import { WALL_PATH } from './src/web/app/paths.ts';
 
 /** Where `npm run dev:server` listens: config.ts's default HOST and PORT. */
@@ -15,7 +16,9 @@ const DEFAULT_THEME = /\[data-theme='default'\]\s*\{([^}]*)\}/;
 const SURFACE_TOKEN = /--surface\s*:\s*(#[\da-f]{6})\s*;/i;
 // Navigations that go to the server, never to the cached app shell (WEB-12).
 // The worker tests the path and the query string, so /api?x must match too.
-const SERVER_PATHS = [/^\/api(?:[/?]|$)/, /^\/media(?:[/?]|$)/];
+const SERVER_PATHS = SERVER_PATH_PREFIXES.map(
+  (prefix) => new RegExp(`^${RegExp.escape(prefix)}(?:[/?]|$)`),
+);
 
 /**
  * The default theme's --surface, for the web manifest, so that themes.css
@@ -91,11 +94,9 @@ export default defineConfig({
     // gzipped); this limit still warns about an unexpected jump.
     chunkSizeWarningLimit: 600,
   },
-  // `npm run preview` forwards these too.
   server: {
-    proxy: {
-      '/api': DEV_SERVER_ORIGIN,
-      '/media': DEV_SERVER_ORIGIN,
-    },
+    proxy: Object.fromEntries(
+      SERVER_PATH_PREFIXES.map((prefix) => [prefix, DEV_SERVER_ORIGIN]),
+    ),
   },
 });
