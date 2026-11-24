@@ -1,0 +1,16 @@
+/*
+ * Theme tokens: the one file where HomeHub names a color (WEB-5). Each theme
+ * is a block of the same custom properties under [data-theme] on <html>, and
+ * index.css maps them to Tailwind utilities. Values are #rrggbb, because
+ * themes.test.ts parses them for the contrast check (WEB-6).
+ */
+
+/* A calm neutral until step 3.3 designs the seasonal palettes. */
+[data-theme='default'] {
+  --surface: #f5f5f4;
+  --surface-raised: #ffffff;
+  --text: #1c1917;
+  --text-muted: #57534e;
+  --accent: #0f766e;
+  --border: #d6d3d1;
+}

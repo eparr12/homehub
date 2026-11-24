@@ -128,7 +128,7 @@ Version notes, checked November 23, 2026:
 - TypeScript 6.0 is the last JavaScript-based compiler. TypeScript 7.0, the native compiler released in July 2026, ships no API yet, so typescript-eslint can't run on it. Switch once typescript-eslint supports TypeScript 7.1, which is in beta.
 - node:sqlite is still a release candidate in Node 26, so better-sqlite3 stays until it's stable. Drizzle ORM 1.0 is also still a release candidate; plain SQL keeps the dependency list short.
 - Watchtower, the usual container auto-updater, was archived in December 2025, so the host pulls new images with a scheduled `docker compose pull`.
-- Current majors on npm: React 19.3, React Router 8 (react-router-dom is gone; import from react-router), Vite 8, Vitest 5, vite-plugin-pwa 2, Motion 14, Tailwind CSS 4, Hono 4, Zod 4, Dexie 4 and better-sqlite3 13. Dependabot keeps the minor versions current.
+- Current majors on npm: React 19.3, React Router 8 (react-router-dom is gone; import from react-router), Vite 8, Vitest 5, vite-plugin-pwa 2, Motion 14, react-error-boundary 6, Tailwind CSS 4, Hono 4, Zod 4, Dexie 4 and better-sqlite3 13. Dependabot keeps the minor versions current.
 
 ## Access: private by design
 
@@ -254,7 +254,7 @@ How it runs:
 
 - The server turns the clock's instant into a local date in HOME_TZ (America/New_York) with Temporal, then evaluates each rule for last year, this year and next year, so windows that cross New Year's work.
 - GET /api/themes/current returns the active theme (key, name, artwork and quotes), the next few holidays with their dates, and nextChangeAt, the next local midnight when the answer can change. Clients cache it in Dexie, switch at nextChangeAt, and keep the last theme while offline.
-- The web app applies a theme by setting data-theme on the html element; each theme is one block of CSS custom properties.
+- The web app applies a theme by setting data-theme on the html element; each theme is one block of CSS custom properties in src/web/styles/themes.css: surface, surface-raised, text, text-muted, accent and border, written as #rrggbb. That file is the only one that names a color. index.css maps the tokens to Tailwind utilities and removes Tailwind's own palette, and a test fails on a color anywhere else in src/web or vite.config.ts, or on a text and background pair below WEB-6's contrast. Until step 3.3 designs the palettes, one calm default theme fills every token.
 - Themes are never calculated in UTC. The container runs on UTC, and a UTC calculation would end Halloween at 8 PM on Halloween night. Node 26 ships full time zone data, so the slim image needs nothing extra.
 
 Tests:
@@ -271,7 +271,7 @@ Until the mini PC arrives, the UPERFECT is a second screen on the desktop, runni
 ```
 
 - Cabling: if the mini PC has USB-C with DisplayPort output, one cable carries picture and touch. Otherwise use HDMI plus a USB cable for touch.
-- CSS: touch-action: manipulation on the whole app, to stop double-tap zoom.
+- CSS: touch-action: manipulation and overscroll-behavior: none on the html element, to stop double-tap zoom, pull-to-refresh and bounce.
 - Startup and recovery: sign in automatically, start the browser at boot, and relaunch it if it crashes.
 - Maintenance: schedule OS updates inside the 12 AM to 6 AM sleep window, and reload the page nightly to pick up new deploys.
 - Night mode: the app shows a black screen at midnight that wakes on touch, and the OS turns the display off until 6 AM. The exact commands depend on the mini PC's OS.
@@ -334,7 +334,7 @@ homehub/
 │       ├── data/              # Dexie database, sync manager, API client, live-query hooks
 │       ├── features/          # grocery, photos, themes, shopping, status
 │       ├── components/
-│       └── styles/            # Tailwind entry and theme tokens
+│       └── styles/            # index.css (Tailwind) and themes.css, the only file that names a color
 ├── tests/e2e/                 # Playwright
 ├── deploy/                    # Windows update script; NAS systemd units
 ├── Dockerfile

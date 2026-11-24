@@ -1,1 +1,32 @@
 @import 'tailwindcss';
+@import './themes.css';
+
+/*
+ * Color utilities read the theme tokens at runtime, so changing data-theme
+ * restyles everything. Resetting --color-* drops Tailwind's own palette: a
+ * class such as bg-white generates nothing (WEB-5).
+ */
+@theme inline {
+  --color-*: initial;
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+}
+
+@layer base {
+  html {
+    /*
+     * No double-tap zoom on the wall or the phones. touch-action isn't
+     * inherited, but a touch obeys every value from its target up to the
+     * nearest scroll container, which is the page itself here.
+     */
+    touch-action: manipulation;
+    /* No pull-to-refresh, bounce or swipe navigation. */
+    overscroll-behavior: none;
+    background-color: var(--surface);
+    color: var(--text);
+  }
+}
