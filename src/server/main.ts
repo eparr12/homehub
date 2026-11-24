@@ -27,7 +27,7 @@ if (!config.ok) {
   process.exit(1);
 }
 
-const { dataDir } = config.value;
+const { dataDir, allowedUsers, devUser } = config.value;
 const backupsDir = join(dataDir, BACKUPS_FOLDER);
 // recursive creates DATA_DIR too, since backups/ sits inside it.
 mkdirSync(backupsDir, { recursive: true });
@@ -43,7 +43,7 @@ await migrate(db, {
 
 const server = serve(
   {
-    fetch: createApp({ db, log }).fetch,
+    fetch: createApp({ db, log, allowedUsers, devUser }).fetch,
     hostname: config.value.host,
     port: config.value.port,
   },
