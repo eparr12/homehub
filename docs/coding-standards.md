@@ -204,7 +204,7 @@ Claude Code writes most of HomeHub's code and takes each change from branch to m
 - **AI-3** One task per session: start fresh (/clear) for each issue or build-plan step, and give Claude the step, the relevant docs sections and the check that proves it's done.
 - **AI-4** Claude runs `npm run check`, plus `npm run e2e` when UI, PWA or sync code changed, and shows them passing before calling a task done.
 - **AI-5** Claude runs the whole loop: it builds each change on a branch, pushes, opens the PR with `gh pr create` and the template, and tells me when it's ready for review.
-- **AI-6** Every PR gets a review from the HomeHub claude.ai project before it merges. I paste the review into Claude's session, ending with an instruction to merge. Claude fixes every Blocker, handles each Should fix as the Code reviews table says, pushes, and merges with `gh pr merge --squash --delete-branch` once CI passes (CI arrives in build-plan step 1.7). Claude merges only when my message tells it to.
+- **AI-6** Every PR gets a review from the HomeHub claude.ai project before it merges. I paste the review into Claude's session, ending with an instruction to merge. Claude fixes every Blocker, handles each Should fix as the Code reviews table says, pushes, and merges with `gh pr merge --squash --delete-branch` once CI passes. Claude merges only when my message tells it to.
 - **AI-7** The committed .claude/settings.json allows npm scripts and read-only Git except `git diff`, because a path outside the repo switches it to `--no-index` without the flag; asks before Git commands that use `--output` or `--no-index` or name a .env file; and denies reading .env files and the data/ folder. Every shell rule is written for both Bash and PowerShell, and `disableBypassPermissionsMode` keeps bypassPermissions off. `blockReadsOutsideWorkingDirectories` stays off: with it on, Claude Code stops for approval, in every mode, on any shell command it can't trace, which on Windows was most of them (Claude Code issues 102430 and 105761). Auto mode asks before the first read outside the repo instead. `autoMemoryEnabled` is false: auto memory keeps notes in the home folder, on one machine, where no pull request reviews them, so lessons go into CLAUDE.md. Sessions run in Auto mode, which drops broad allows for package-manager run commands such as `npm run *` on entry, so there a classifier decides npm scripts as well as every command no rule covers.
 - **AI-8** New dependencies are named in the PR description with a reason (GEN-9); Claude never changes package.json or the lockfile without saying so there.
 - **AI-9** Never paste secrets or other people's personal data into a prompt; Claude Code keeps transcripts as plain text on the desktop.
@@ -219,7 +219,7 @@ npm scripts are the single entry point for people, Claude Code and CI:
 | Script | Does |
 | --- | --- |
 | `npm run dev` | Server in watch mode (`node --watch`) plus the Vite dev server, which proxies /api, /media and /api/events |
-| `npm run check` | Typecheck both configs, ESLint, Prettier check, Vitest; the gate for every task (AI-4) |
+| `npm run check` | Typecheck the three configs, ESLint, Prettier check, Vitest; the gate for every task (AI-4) |
 | `npm run e2e` | Playwright against a production build with a temporary data folder |
 | `npm run build` | Production web build into dist/web |
 | `npm start` | `node src/server/main.ts`, which is what the container runs |
@@ -250,12 +250,14 @@ tsconfig.base.json:
 - TypeScript 6 defaults `types` to an empty list, so each config names its own: `["node"]` at the root and in tests/e2e, and `["vite/client", "node", "vite-plugin-pwa/react"]` in src/web, where Node types are needed only because the client imports the server's `AppType`.
 - ESLint (flat config) uses typescript-eslint's strict-type-checked and stylistic-type-checked presets, eslint-plugin-react-hooks, eslint-plugin-jsx-a11y and `@typescript-eslint/no-restricted-imports` for the ARCH boundaries (with `allowTypeImports` for AppType). Prettier owns formatting through eslint-config-prettier.
 - Vitest runs two projects: node (src/shared, src/server) and web (src/web, jsdom, fake-indexeddb, Testing Library).
+- Coverage uses @vitest/coverage-v8 and is on only when CI is set, so `npm run check` stays one command; `npm run test -- --coverage` prints it locally. It counts every file under src except src/server/test-support.ts, so a module no test imports shows at 0%, and prints a text table with no thresholds, so it never fails a run (TEST-3).
 - Playwright runs three projects: wall (Chromium at 1920 by 1080), iPhone (WebKit) and Android (Chromium, Pixel viewport), with @axe-core/playwright for accessibility.
+- Dependabot (.github/dependabot.yml) checks npm and GitHub Actions weekly and offers only releases at least 7 days old; security updates don't wait. In each, one group holds every minor and patch update, so a major always comes alone. It ignores majors of typescript (see above) and @types/node, whose major follows .nvmrc. Titles read build(deps), build(deps-dev) for devDependencies, or ci(deps) (GIT-3).
 
 CI gates on every pull request; all must pass to merge:
 
 1. `npm ci`, then `npm run check` (typecheck, lint, format, unit tests with coverage).
-2. `npm run e2e` with the Playwright report uploaded as an artifact.
+2. `npm run e2e`, with the Playwright report uploaded as an artifact when the run fails.
 3. `npm audit --audit-level=high`.
 4. The Docker image builds (pushing to GHCR happens only on main).
 5. CodeQL default setup and secret scanning run alongside, from the repository's security settings.

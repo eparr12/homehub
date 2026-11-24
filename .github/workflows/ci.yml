@@ -1,0 +1,59 @@
+# The CI gates in docs/coding-standards.md. The main ruleset requires the check
+# and e2e jobs by name, so neither job has a name: key, and pull_request has no
+# filter: a required job that never starts leaves a pull request waiting.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A read-only token for every job, and no secrets (SEC-1).
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # Not ubuntu-latest: that label moves on GitHub's schedule, which would
+    # change the system we test on a day nobody chose.
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # package.json has no packageManager field, so setup-node caches npm's
+      # downloads only when asked.
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # CI is set here, so Vitest prints the coverage table (vitest.config.ts).
+      - run: npm run check
+      - run: npm audit --audit-level=high
+
+  e2e:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # No browser cache: Playwright's CI guide finds that restoring one takes
+      # about as long as the download.
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run e2e
+      # Anyone signed in to GitHub can download this report, so test data
+      # stays made up (GIT-7).
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

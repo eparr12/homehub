@@ -1,0 +1,45 @@
+# Weekly version updates (SEC-10). Each ecosystem waits 7 days after a release
+# instead of Dependabot's default 3; security updates never wait. One group
+# holds every minor and patch update, so a major always comes alone, and
+# packages that must match, such as vitest and @vitest/coverage-v8, move in
+# one pull request.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      minor-and-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      # TypeScript 7 ships no API yet, so typescript-eslint can't run on it
+      # (Tooling in docs/coding-standards.md).
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      # Its major follows the Node line in .nvmrc, which moves by hand.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+    # Titles read build(deps): ..., or build(deps-dev): ... for
+    # devDependencies (GIT-3).
+    commit-message:
+      prefix: build
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      minor-and-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+    # Titles read ci(deps): ... (GIT-3).
+    commit-message:
+      prefix: ci
+      include: scope

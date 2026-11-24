@@ -353,7 +353,7 @@ homehub/
 
 ## Testing strategy
 
-Tests target the riskiest parts first: sync correctness, time logic and the offline flow. All of them run in GitHub Actions on every push.
+Tests target the riskiest parts first: sync correctness, time logic and the offline flow. All of them run in GitHub Actions on every pull request and every push to main.
 
 | Level | Tools | Key cases |
 | --- | --- | --- |

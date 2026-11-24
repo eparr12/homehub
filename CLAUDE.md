@@ -13,6 +13,7 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 
 - `npm run dev`: server (`node --watch`, loading .env if it exists) plus Vite, with /api and /media proxied; DEV_USER stands in for the Tailscale identity
 - `npm run check`: typecheck, lint, format check and unit tests; must pass before you say a task is done
+- `npm run test -- --coverage`: the unit tests with the coverage table, which CI prints in every run of the check job (coverage is on whenever CI is set)
 - `npm run format`: Prettier rewrites code to the style `npm run check` expects (Markdown is left alone)
 - `npm run e2e`: builds the app, starts the real server on 127.0.0.1:8181 and runs Playwright's wall, iphone and android projects, with the report in playwright-report/ (`npx playwright show-report` opens it); run it when UI, PWA or sync code changed. It needs the browsers, once: `npx playwright install chromium webkit`
 - `npm run build`: production web build into dist/web
@@ -27,12 +28,14 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 - src/web: the React app (Vite root, own tsconfig.json): main.tsx (creates the API client and the connectivity store, then renders the app with them and `window` in contexts), app/ (routes, wall and phone layouts, and AppUpdates, the root route that runs the service worker), data/ (Dexie, sync manager, API client, hooks), features/, components/, styles/ (index.css, and themes.css, which holds every color), public/ (icon.svg and the icons made from it)
 - tests/e2e: Playwright, configured by playwright.config.ts at the root, with its own tsconfig.json (DOM types, for page.evaluate): start-server.ts (the test server's launcher), test-server.ts (its port and test login), fixtures.ts (the page guard) and guard.spec.ts (its tests), page-checks.ts, and the specs. A spec runs in every project unless its name ends in wall.spec.ts (the wall only) or phone.spec.ts (the phones only)
 - deploy/: host update scripts
+- .github: workflows/ci.yml (the check and e2e jobs), dependabot.yml and the PR template
 
 ## How we work
 
 - You run the whole loop: work on a branch, commit with Conventional Commits, push, open the PR with `gh pr create` using the template, and tell me it's ready. Don't use plan mode or wait for approval (AI-2, AI-5).
 - For sync, migrations, security, CI/CD, deploy scripts and anything that deletes data, start the PR description with a short plan: the approach, the rule IDs it touches and the tests you add (AI-2).
 - I paste back a review from the HomeHub claude.ai project, ending with an instruction to merge. Fix its Blockers, handle each Should fix as the Code reviews table says, push, then merge with `gh pr merge --squash --delete-branch` once CI passes. Merge only when my message tells you to, never before the review (AI-6).
+- Before a merge, wait for the checks with `gh pr checks <N> --watch`. When GitHub says the branch is behind main, run `gh pr update-branch <N>` and wait for the checks again. Never merge with `--admin` or `--auto`.
 - One task per session, and pull requests under about 400 changed lines.
 - Write tests first for logic. Never weaken, skip or delete a test to make it pass (TEST-10).
 - Don't add a dependency without giving the reason in the PR description (GEN-9, AI-8).
@@ -77,5 +80,6 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 - No test is skipped in WebKit, but WebKit shows any non-HTML navigation, such as JSON from /api, in a `<pre>` of its own with a style attribute, which the Content Security Policy blocks. So a WebKit test that navigates to JSON expects the style-src-attr violation and the "Refused to apply a stylesheet" console error, as service-worker.spec.ts does. Offline, WebKit reports a failed request as "WebKit encountered an internal error", where Chromium says net::ERR_INTERNET_DISCONNECTED.
 - The offline test fails in Chromium on any response that didn't come from the worker, because Chromium's HTTP cache answers offline for a file the precache lacks. WebKit answers the next page's script and stylesheet from its memory cache without asking the worker, so the check runs in Chromium only. In WebKit, a precache miss fails the load itself, which the guard reports.
 - The wall's full-screen card scales up from 0.96 as it opens, so measure or scan it only once it covers the screen, as openPhotos in wall.spec.ts waits for.
+- A failed e2e run uploads playwright-report/ as an artifact kept 14 days, with each failed test's trace (page snapshots and every request's headers), and anyone signed in to GitHub can download it. So test data stays made up: no real names, logins or photos (GIT-7).
 
 @docs/coding-standards.md
