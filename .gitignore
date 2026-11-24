@@ -3,6 +3,9 @@ dist/
 coverage/
 playwright-report/
 test-results/
+# The e2e server's data folder, which tests/e2e/start-server.ts deletes at the
+# start of each run.
+/e2e-data/
 
 # Anchored to the repo root: /data/ holds the SQLite database, backups and
 # photos, while src/web/data/ is source code (GIT-7, DATA-9).

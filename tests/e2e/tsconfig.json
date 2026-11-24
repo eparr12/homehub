@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "lib": ["es2025", "esnext.temporal", "dom"],
+    "types": ["node"]
+  },
+  "include": ["."]
+}

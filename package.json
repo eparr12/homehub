@@ -13,11 +13,12 @@
     "build": "vite build",
     "icons": "pwa-assets-generator",
     "start": "node src/server/main.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p src/web/tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p src/web/tsconfig.json && tsc --noEmit -p tests/e2e/tsconfig.json",
     "lint": "eslint --max-warnings 0 .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "e2e": "playwright test",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test"
   },
   "overrides": {
@@ -33,7 +34,9 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/vite": "^4.3.5",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
