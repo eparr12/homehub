@@ -3,7 +3,7 @@ HomeHub: our family dashboard for a wall touchscreen and our phones
 
 ## Develop
 
-You need Node.js 26 (the version in .nvmrc). Then:
+You need Node.js 26.4 or newer, in the 26 line that .nvmrc names. It ships npm 11.17, and npm before 11.16 ignores package.json's `allowScripts`. Then:
 
 ```sh
 npm ci           # install exactly what package-lock.json lists

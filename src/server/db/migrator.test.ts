@@ -16,6 +16,25 @@ const CREATE_ITEMS: Migrations = {
 const ADD_ITEM: Migrations = {
   '0002_add_item.sql': 'INSERT INTO items (id) VALUES (1);',
 };
+// A parent with two child rows that the database deletes along with it.
+const CREATE_FAMILY: Migrations = {
+  '0001_create_family.sql': `
+    CREATE TABLE parents (id INTEGER PRIMARY KEY) STRICT;
+    CREATE TABLE children (
+      id INTEGER PRIMARY KEY,
+      parent_id INTEGER NOT NULL REFERENCES parents (id) ON DELETE CASCADE
+    ) STRICT;
+    INSERT INTO parents (id) VALUES (1);
+    INSERT INTO children (id, parent_id) VALUES (1, 1), (2, 1);`,
+};
+// SQLite's table rebuild: create the new table, copy, drop the old, rename.
+const REBUILD_PARENTS: Migrations = {
+  '0002_rebuild_parents.sql': `
+    CREATE TABLE new_parents (id INTEGER PRIMARY KEY, name TEXT) STRICT;
+    INSERT INTO new_parents (id) SELECT id FROM parents;
+    DROP TABLE parents;
+    ALTER TABLE new_parents RENAME TO parents;`,
+};
 
 /** A new in-memory database with its own migration and backup folders. */
 function setUp(migrations: Migrations) {
@@ -53,6 +72,18 @@ function userVersion(db: Database.Database): unknown {
 
 function itemIds(db: Database.Database): unknown[] {
   return db.prepare('SELECT id FROM items ORDER BY id').pluck().all();
+}
+
+function parentIds(db: Database.Database): unknown[] {
+  return db.prepare('SELECT id FROM parents ORDER BY id').pluck().all();
+}
+
+function childIds(db: Database.Database): unknown[] {
+  return db.prepare('SELECT id FROM children ORDER BY id').pluck().all();
+}
+
+function foreignKeys(db: Database.Database): unknown {
+  return db.pragma('foreign_keys', { simple: true });
 }
 
 function tableNames(db: Database.Database): unknown[] {
@@ -136,6 +167,42 @@ describe('migrate', () => {
       version: 1,
       items: [],
     });
+  });
+
+  it('keeps the child rows when a migration rebuilds their parent table', async () => {
+    const { db, migrationsDir, run } = setUp(CREATE_FAMILY);
+    await run();
+    addMigrations(migrationsDir, REBUILD_PARENTS);
+
+    await run();
+
+    expect({ children: childIds(db), foreignKeys: foreignKeys(db) }).toEqual({
+      children: [1, 2],
+      foreignKeys: 1,
+    });
+  });
+
+  it('rolls back a migration that leaves a child row without its parent', async () => {
+    const { db, migrationsDir, run } = setUp(CREATE_FAMILY);
+    await run();
+    addMigrations(migrationsDir, {
+      '0002_delete_parent.sql': 'DELETE FROM parents WHERE id = 1;',
+    });
+
+    await expect(run()).rejects.toMatchObject({
+      message: 'Migration 0002_delete_parent.sql failed and was rolled back',
+      cause: {
+        message:
+          'Foreign key broken: a row in children points at a missing row in parents',
+      },
+    });
+
+    expect({
+      version: userVersion(db),
+      parents: parentIds(db),
+      children: childIds(db),
+      foreignKeys: foreignKeys(db),
+    }).toEqual({ version: 1, parents: [1], children: [1, 2], foreignKeys: 1 });
   });
 
   it('leaves a database that is newer than the migrations unchanged', async () => {

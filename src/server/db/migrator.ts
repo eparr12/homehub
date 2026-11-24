@@ -28,11 +28,21 @@ interface Migration {
 const MIGRATION_FILE = /^(\d{4})_[a-z][a-z0-9_]*\.sql$/;
 const VERSION_DIGITS = 4;
 const userVersionSchema = z.number().int().nonnegative();
+// The first broken reference, if any. pragma_foreign_key_check's columns are
+// table, rowid, parent and fkid, and "table" needs quotes: it's a keyword.
+const FIRST_BROKEN_FOREIGN_KEY_SQL =
+  'SELECT "table", parent FROM pragma_foreign_key_check LIMIT 1';
+const brokenForeignKeySchema = z.object({
+  table: z.string(),
+  parent: z.string(),
+});
 
 /**
  * Applies the pending migrations in order, each in its own transaction
- * (DATA-4), after backing up a database that already has a schema. Files
- * never contain BEGIN or COMMIT, because they run inside that transaction.
+ * (DATA-4), after backing up a database that already has a schema. Foreign
+ * keys are off while a file runs, so ON DELETE actions don't fire, and all of
+ * them are checked before the file commits. Files never contain BEGIN, COMMIT
+ * or PRAGMA foreign_keys.
  */
 export async function migrate(
   db: Database.Database,
@@ -138,15 +148,33 @@ function applyMigration(
 ): void {
   const apply = db.transaction(() => {
     db.exec(sql);
+    checkForeignKeys(db);
     // PRAGMA values can't be bound (DATA-6), so this interpolates `version`:
     // the integer parsed from the file's checked NNNN name, never input.
     db.pragma(`user_version = ${String(version)}`);
   });
+  // SQLite's table-rebuild procedure. PRAGMA foreign_keys does nothing inside
+  // a transaction, and while it's on, DROP TABLE runs ON DELETE actions on the
+  // child rows. So foreign keys are off for the file and checked before it
+  // commits.
+  db.pragma('foreign_keys = OFF');
   try {
     apply();
   } catch (error) {
     throw new Error(`Migration ${file} failed and was rolled back`, {
       cause: error,
     });
+  } finally {
+    db.pragma('foreign_keys = ON');
   }
+}
+
+/** Throws, naming the first broken reference, unless every foreign key holds. */
+function checkForeignKeys(db: Database.Database): void {
+  const broken = db.prepare(FIRST_BROKEN_FOREIGN_KEY_SQL).get();
+  if (broken === undefined) return;
+  const { table, parent } = brokenForeignKeySchema.parse(broken);
+  throw new Error(
+    `Foreign key broken: a row in ${table} points at a missing row in ${parent}`,
+  );
 }
