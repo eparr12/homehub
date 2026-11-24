@@ -35,7 +35,7 @@
       "PowerShell(Get-Content *.env*)",
       "PowerShell(Select-String *.env*)"
     ],
-    "blockReadsOutsideWorkingDirectories": true,
+    "blockReadsOutsideWorkingDirectories": false,
     "disableBypassPermissionsMode": "disable"
   }
 }
