@@ -58,9 +58,6 @@ export function WallGrid({
             }}
           />
         ))}
-        <div className="fixed top-10 right-10 z-10 text-2xl">
-          <OfflineBadge />
-        </div>
       </main>
       <AnimatePresence
         onExitComplete={() => {
@@ -173,6 +170,11 @@ function FullScreenCard({ card, onClose }: FullScreenCardProps) {
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
+      // Focusable, so Escape still reaches it after a click on its background.
+      tabIndex={-1}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') onClose();
+      }}
       initial={HIDDEN}
       animate={SHOWN}
       exit={HIDDEN}
@@ -183,14 +185,17 @@ function FullScreenCard({ card, onClose }: FullScreenCardProps) {
         <h2 id={titleId} className="text-6xl font-semibold">
           {card.title}
         </h2>
-        <button
-          type="button"
-          ref={focusOnMount}
-          onClick={onClose}
-          className={WALL_BUTTON}
-        >
-          Close
-        </button>
+        <div className="flex items-center gap-6 text-2xl">
+          <OfflineBadge />
+          <button
+            type="button"
+            ref={focusOnMount}
+            onClick={onClose}
+            className={WALL_BUTTON}
+          >
+            Close
+          </button>
+        </div>
       </div>
       <ErrorBoundary
         fallback={

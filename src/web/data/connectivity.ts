@@ -17,7 +17,7 @@ export interface Connectivity {
 
 interface NetworkState {
   readonly isBrowserOnline: boolean;
-  readonly didLastRequestFail: boolean;
+  readonly hasLastRequestFailed: boolean;
 }
 
 /**
@@ -28,9 +28,9 @@ export function createConnectivity(network: BrowserNetwork): Connectivity {
   const listeners = new Set<() => void>();
   let state: NetworkState = {
     isBrowserOnline: network.navigator.onLine,
-    didLastRequestFail: false,
+    hasLastRequestFailed: false,
   };
-  const isOffline = () => !state.isBrowserOnline || state.didLastRequestFail;
+  const isOffline = () => !state.isBrowserOnline || state.hasLastRequestFailed;
 
   function update(change: Partial<NetworkState>): void {
     const wasOffline = isOffline();
@@ -58,13 +58,13 @@ export function createConnectivity(network: BrowserNetwork): Connectivity {
         try {
           const response = await fetchImpl(input, init);
           // Any response counts, error statuses included: the server answered.
-          update({ didLastRequestFail: false });
+          update({ hasLastRequestFailed: false });
           return response;
         } catch (error) {
           // An aborted request was cancelled, on unmount for example, and
           // says nothing about the network.
           if (init?.signal?.aborted !== true) {
-            update({ didLastRequestFail: true });
+            update({ hasLastRequestFailed: true });
           }
           throw error;
         }

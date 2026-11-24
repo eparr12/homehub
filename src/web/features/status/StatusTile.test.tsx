@@ -1,15 +1,24 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HealthResponse } from '../../../shared/health.ts';
+import type { Problem } from '../../../shared/problem.ts';
 import { ApiClientContext, createApiClient } from '../../data/api-client.ts';
 import { HEALTH_REFRESH_MS } from '../../data/use-server-health.ts';
 import { StatusTile } from './StatusTile.tsx';
 
 const TEST_ORIGIN = 'http://homehub.test';
+const HTTP_INTERNAL_SERVER_ERROR = 500;
 const HTTP_BAD_GATEWAY = 502;
 const HTTP_SERVICE_UNAVAILABLE = 503;
 const HEALTHY: HealthResponse = { status: 'ok', database: 'ok' };
 const DATABASE_FAILED: HealthResponse = { status: 'error', database: 'error' };
+// What app.onError answers: JSON, but not a health report.
+const SERVER_PROBLEM: Problem = {
+  type: 'about:blank',
+  title: 'Internal Server Error',
+  status: HTTP_INTERNAL_SERVER_ERROR,
+  requestId: 'request-1',
+};
 const CHECKING_TEXT = 'Checking the server…';
 const OK_TEXT = 'Server and database OK';
 const DATABASE_FAILED_TEXT = 'Server is up, but its database check failed';
@@ -31,9 +40,16 @@ const proxyErrorPage: typeof fetch = () =>
       headers: { 'Content-Type': 'text/html' },
     }),
   );
+const answerProblem: typeof fetch = () =>
+  Promise.resolve(
+    Response.json(SERVER_PROBLEM, {
+      status: HTTP_INTERNAL_SERVER_ERROR,
+      headers: { 'Content-Type': 'application/problem+json' },
+    }),
+  );
 
-function renderTile(network: typeof fetch): void {
-  render(
+function renderTile(network: typeof fetch) {
+  return render(
     <ApiClientContext value={createApiClient(TEST_ORIGIN, network)}>
       <StatusTile />
     </ApiClientContext>,
@@ -83,6 +99,7 @@ describe('StatusTile', () => {
   it.each([
     { case: 'the request gets no answer', network: noAnswer },
     { case: 'a proxy answers with its error page', network: proxyErrorPage },
+    { case: 'the server answers with a problem', network: answerProblem },
   ])("says it can't reach the server when $case", async ({ network }) => {
     renderTile(network);
 
@@ -105,5 +122,26 @@ describe('StatusTile', () => {
       OK_TEXT,
       DATABASE_FAILED_TEXT,
     ]);
+  });
+
+  it('stops reading /api/health when it unmounts during a request', async () => {
+    const network = vi.fn(answerHealthy);
+    const { unmount } = renderTile(network);
+
+    unmount();
+    await advance(HEALTH_REFRESH_MS);
+
+    expect(network).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops reading /api/health when it unmounts between reads', async () => {
+    const network = vi.fn(answerHealthy);
+    const { unmount } = renderTile(network);
+    await advance();
+
+    unmount();
+    await advance(HEALTH_REFRESH_MS);
+
+    expect(network).toHaveBeenCalledTimes(1);
   });
 });

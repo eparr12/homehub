@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { OfflineBadge } from '../components/OfflineBadge.tsx';
 import { StatusTile } from '../features/status/StatusTile.tsx';
 import { type WallCardSpec, WallGrid } from './WallGrid.tsx';
 
@@ -35,7 +36,7 @@ export const WALL_CARDS: readonly WallCardSpec[] = [
     id: 'status',
     title: 'Status',
     placement: '',
-    Content: StatusTile,
+    Content: StatusCardContent,
     isExpandable: false,
   },
 ];
@@ -43,6 +44,19 @@ export const WALL_CARDS: readonly WallCardSpec[] = [
 /** The wall layout at /wall, for the 1920 by 1080 touchscreen. */
 export function WallPage() {
   return <WallGrid cards={WALL_CARDS} />;
+}
+
+/**
+ * The server's status, then the offline badge. The badge sits in the card's
+ * flow, on a card with no button, so it never covers something to tap.
+ */
+function StatusCardContent() {
+  return (
+    <div className="flex flex-col items-start gap-4 text-2xl">
+      <StatusTile />
+      <OfflineBadge />
+    </div>
+  );
 }
 
 function PhotosPlaceholder() {

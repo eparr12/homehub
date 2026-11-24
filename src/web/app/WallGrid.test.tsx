@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import {
   afterAll,
   afterEach,
@@ -17,6 +17,8 @@ import { type WallCardSpec, WallGrid } from './WallGrid.tsx';
 // Longer than the card transition, so an exit animation has finished.
 const TRANSITION_DONE_MS = 1_000;
 const FALLBACK_TEXT = 'This card stopped working.';
+const FULL_SCREEN_FALLBACK_TEXT =
+  'This view stopped working. Close it and try again.';
 
 function testCard(title: string, isExpandable = true): WallCardSpec {
   return {
@@ -39,9 +41,12 @@ function Broken(): never {
   throw new Error('broken card');
 }
 
-function renderGrid(cards: readonly WallCardSpec[] = CARDS): void {
+function renderGrid({
+  cards = CARDS,
+  isOnline = true,
+}: { cards?: readonly WallCardSpec[]; isOnline?: boolean } = {}): void {
   const connectivity = createConnectivity({
-    navigator: { onLine: true },
+    navigator: { onLine: isOnline },
     addEventListener: () => undefined,
   });
   render(
@@ -98,11 +103,42 @@ describe('WallGrid', () => {
     }).toEqual({ isDialogGone: true, isCardFocused: true });
   });
 
+  it('closes the full-screen card with Escape', async () => {
+    renderGrid();
+    fireEvent.click(screen.getByRole('button', { name: 'One' }));
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Close' }), {
+      key: 'Escape',
+    });
+    await advance(TRANSITION_DONE_MS);
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('makes the grid inert while a card is open', () => {
+    renderGrid();
+
+    fireEvent.click(screen.getByRole('button', { name: 'One' }));
+
+    expect(screen.getByRole('main').hasAttribute('inert')).toBe(true);
+  });
+
+  it('shows the offline badge in the full-screen view', () => {
+    renderGrid({ isOnline: false });
+
+    fireEvent.click(screen.getByRole('button', { name: 'One' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'One' });
+    expect(within(dialog).getByRole('status').textContent).toBe('Offline');
+  });
+
   it('keeps the other cards up when one throws', () => {
     // React reports the caught error to the console.
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    renderGrid([{ ...CARDS[0], Content: Broken }, ...CARDS.slice(1)]);
+    renderGrid({
+      cards: [{ ...CARDS[0], Content: Broken }, ...CARDS.slice(1)],
+    });
 
     expect({
       fallbacks: screen.getAllByText(FALLBACK_TEXT).length,
@@ -120,7 +156,7 @@ describe('WallGrid', () => {
       if (isBroken) throw new Error('flaky card');
       return <p>Content of One</p>;
     }
-    renderGrid([{ ...CARDS[0], Content: Flaky }, ...CARDS.slice(1)]);
+    renderGrid({ cards: [{ ...CARDS[0], Content: Flaky }, ...CARDS.slice(1)] });
     isBroken = false;
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
@@ -133,5 +169,28 @@ describe('WallGrid', () => {
       'Content of Three',
       'Content of Four',
     ]);
+  });
+
+  it('keeps Close in the full-screen view when the content throws there', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let isBroken = false;
+    function Fragile() {
+      if (isBroken) throw new Error('fragile card');
+      return <p>Content of One</p>;
+    }
+    renderGrid({
+      cards: [{ ...CARDS[0], Content: Fragile }, ...CARDS.slice(1)],
+    });
+    isBroken = true;
+
+    fireEvent.click(screen.getByRole('button', { name: 'One' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'One' });
+    expect({
+      hasFallback:
+        within(dialog).queryByText(FULL_SCREEN_FALLBACK_TEXT) !== null,
+      hasClose:
+        within(dialog).queryByRole('button', { name: 'Close' }) !== null,
+    }).toEqual({ hasFallback: true, hasClose: true });
   });
 });

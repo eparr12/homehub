@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = join(import.meta.dirname, '..', '..', '..');
 const WEB_ROOT = join(REPO_ROOT, 'src', 'web');
 const THEMES_FILE = join(WEB_ROOT, 'styles', 'themes.css');
+// This file, whose sample lines below name colors on purpose.
+const SCANNER_FILE = join(WEB_ROOT, 'styles', 'themes.test.ts');
 const PUBLIC_DIR = `${join(WEB_ROOT, 'public')}${sep}`;
 const IMAGE_FILE = /\.(?:avif|gif|ico|jpe?g|png|svg|webp)$/i;
 
@@ -16,7 +18,13 @@ const HEX_COLOR =
 const ISSUE_LINK = /\(#\d+\)/g;
 const COLOR_FUNCTION =
   /(?<![\w-])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/gi;
-const QUOTED_TEXT = /(['"`])(?:(?!\1)[^\\\n]|\\.)*\1/g;
+// A Tailwind arbitrary value, such as text-[tomato] or [color:red]. It holds
+// no spaces or quotes, and _ stands for a space.
+const ARBITRARY_VALUE = /(?:-\[|\[[a-z-]+:)([^\]\s'"`]+)\]/g;
+// The quoted value of a property or attribute that takes a color, such as
+// color: 'red', backgroundColor: "navy" or fill="white".
+const COLOR_PROPERTY_VALUE =
+  /(?:[\w-]*(?:color|Color)|\bfill|\bstroke|\bbackground)['"]?\s*[:=]\s*(['"`])((?:(?!\1)[^\n])*)\1/g;
 const CSS_COMMENT = /\/\*[\s\S]*?\*\//g;
 // CSS Color 4's named colors, without the keywords transparent and
 // currentcolor, which name no color of their own.
@@ -83,7 +91,7 @@ describe('themes.css', () => {
   it('holds every color in src/web and vite.config.ts (WEB-5)', () => {
     const files = [join(REPO_ROOT, 'vite.config.ts'), ...listWebFiles()];
 
-    expect(files.flatMap(findColors)).toEqual([]);
+    expect(files.flatMap(findColorsInFile)).toEqual([]);
   });
 
   describe.each([...THEMES.keys()])('the %s theme', (theme) => {
@@ -101,7 +109,41 @@ describe('themes.css', () => {
   });
 });
 
-/** Every file under src/web but themes.css itself and the images in public/. */
+describe('the color scan', () => {
+  it.each([
+    "{ name: 'Green onions' }",
+    "{ name: 'Lime' }",
+    "const STAPLES = ['Orange juice', 'Snow peas'];",
+    '<button aria-label="Olive oil">',
+    '// TODO(#123): pick a shade',
+  ])('lets %s through', (line) => {
+    expect(findColors(line, false)).toEqual([]);
+  });
+
+  it.each([
+    { line: "className='text-[tomato]'", color: 'tomato' },
+    { line: "style={{ color: 'red' }}", color: 'red' },
+    { line: '<path fill="navy" />', color: 'navy' },
+    { line: "style={{ backgroundColor: '#ff0000' }}", color: '#ff0000' },
+  ])('reports $color in $line', ({ line, color }) => {
+    const found = findColors(line, false);
+
+    expect(found.map((place) => place.color)).toEqual([color]);
+  });
+
+  it('reports a named color in a CSS rule but not in a CSS comment', () => {
+    const found = findColors('a { color: red; } /* white */', true);
+
+    expect(found.map((place) => place.color)).toEqual(['red']);
+  });
+});
+
+interface FoundColor {
+  readonly line: number;
+  readonly color: string;
+}
+
+/** Every file under src/web but themes.css, this file and public/'s images. */
 function listWebFiles(): string[] {
   return readdirSync(WEB_ROOT, { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile())
@@ -109,35 +151,50 @@ function listWebFiles(): string[] {
     .filter(
       (file) =>
         file !== THEMES_FILE &&
+        file !== SCANNER_FILE &&
         !(file.startsWith(PUBLIC_DIR) && IMAGE_FILE.test(file)),
     );
 }
 
+/** Each color the file names, as "path:line: color". */
+function findColorsInFile(file: string): string[] {
+  const path = relative(REPO_ROOT, file).replaceAll(sep, '/');
+  const found = findColors(readFileSync(file, 'utf8'), file.endsWith('.css'));
+  return found.map(({ line, color }) => `${path}:${String(line)}: ${color}`);
+}
+
 /**
- * Each color the file names, as "path:line: color". A named color counts
- * where code would use one: in CSS outside comments, and elsewhere inside a
- * string. A color word in a comment's prose doesn't.
+ * The colors `text` names. Hex colors and color functions count anywhere. A
+ * named color counts only where it can style something: in CSS outside
+ * comments, and elsewhere in a Tailwind arbitrary value or as the value of a
+ * color property, so a grocery called Olive oil doesn't.
  */
-function findColors(file: string): string[] {
-  const text = readFileSync(file, 'utf8');
-  const isCss = file.endsWith('.css');
+function findColors(text: string, isCss: boolean): FoundColor[] {
   const code = isCss
     ? text.replaceAll(CSS_COMMENT, (comment) => comment.replaceAll(/./g, ' '))
     : text;
   const codeLines = code.split('\n');
-  const path = relative(REPO_ROOT, file).replaceAll(sep, '/');
   return text.split('\n').flatMap((line, index) => {
     const codeLine = codeLines[index] ?? '';
-    const namedColorPlaces = isCss
-      ? [codeLine]
-      : (codeLine.match(QUOTED_TEXT) ?? []);
+    const namedColorPlaces = isCss ? [codeLine] : stylingValues(line);
     const colors = [
       ...(line.replaceAll(ISSUE_LINK, '').match(HEX_COLOR) ?? []),
       ...(line.match(COLOR_FUNCTION) ?? []),
       ...namedColorPlaces.flatMap((place) => place.match(NAMED_COLOR) ?? []),
     ];
-    return colors.map((color) => `${path}:${String(index + 1)}: ${color}`);
+    return colors.map((color) => ({ line: index + 1, color }));
   });
+}
+
+/** The arbitrary values and color property values in a line of code. */
+function stylingValues(line: string): string[] {
+  const arbitrary = [...line.matchAll(ARBITRARY_VALUE)].map(([, value = '']) =>
+    value.replaceAll('_', ' '),
+  );
+  const properties = [...line.matchAll(COLOR_PROPERTY_VALUE)].map(
+    ([, , value = '']) => value,
+  );
+  return [...arbitrary, ...properties];
 }
 
 /** Each [data-theme] block's tokens, which must all be #rrggbb. */
