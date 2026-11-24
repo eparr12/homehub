@@ -3,7 +3,7 @@ HomeHub: our family dashboard for a wall touchscreen and our phones
 
 ## Develop
 
-You need Node.js 26 (the version in .nvmrc). Then:
+You need Node.js 26.4 or newer, in the 26 line that .nvmrc names. It ships npm 11.17, and npm before 11.16 ignores package.json's `allowScripts`. Then:
 
 ```sh
 npm ci           # install exactly what package-lock.json lists
@@ -12,3 +12,5 @@ npm run check    # typecheck, lint, format check and unit tests
 ```
 
 The phone layout is at http://localhost:5173/ and the wall layout at http://localhost:5173/wall. Vite forwards /api and /media to the API server.
+
+The server keeps its SQLite database in data/homehub.db, and saves a backup in data/backups before each migration. The data/ folder is gitignored; set DATA_DIR to use another folder.
