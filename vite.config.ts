@@ -12,6 +12,14 @@ export default defineConfig({
   build: {
     outDir: fileURLToPath(new URL('dist/web', import.meta.url)),
     emptyOutDir: true,
+    // Vite inlines small assets as data: URLs, which the server's Content
+    // Security Policy blocks (SEC-8).
+    assetsInlineLimit: 0,
+    // One chunk on purpose: HomeHub loads once and stays open, the wall for
+    // weeks, so splitting the code would add requests and save nothing.
+    // Motion and Zod take it past Vite's 500 kB default (534 kB, 170 kB
+    // gzipped); this limit still warns about an unexpected jump.
+    chunkSizeWarningLimit: 600,
   },
   server: {
     proxy: {

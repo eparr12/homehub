@@ -22,7 +22,7 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 
 - src/shared: Zod schemas, intents and the intent reducer; pure TypeScript (no node:*, no DOM)
 - src/server: main.ts (composition root), app.ts (Hono app, exports AppType), config.ts, db/ (connection, migrator, migrations/NNNN_name.sql), middleware/, features/
-- src/web: the React app (Vite root, own tsconfig.json): app/, data/ (Dexie, sync manager, API client, hooks), features/, components/, styles/
+- src/web: the React app (Vite root, own tsconfig.json): main.tsx (creates the API client and the connectivity store, then renders), app/ (routes, wall and phone layouts), data/ (Dexie, sync manager, API client, hooks), features/, components/, styles/ (index.css, and themes.css, which holds every color)
 - tests/e2e: Playwright
 - deploy/: host update scripts
 
@@ -54,6 +54,10 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 - package.json's `allowScripts` denies better-sqlite3's install script. The package ships prebuilt binaries for Windows and Linux, but installs from the lockfile, such as `npm ci`, ignore its `"gypfile": false` and would run node-gyp, which needs Python and build tools. Never approve the script or install build tools for it. npm honors `allowScripts` from 11.16, so use Node.js 26.4 or newer, which ships npm 11.17.
 - Claude Code's shell can start in the repo with a lowercase drive letter, and from there Vitest 5 fails every suite (vitest-dev/vitest#11872), so vitest.config.ts stops with an error. Run the `Set-Location` command the error prints (or the `cd` it gives for Bash), then `npm run test` or `npm run check`.
 - Migrations run with foreign keys off, and the migrator checks every foreign key before each file commits. So ON DELETE actions don't fire during a migration (delete child rows yourself), and a file never contains BEGIN, COMMIT or PRAGMA foreign_keys.
+- Colors live only in src/web/styles/themes.css, as #rrggbb tokens under [data-theme]; style with the token utilities, such as bg-surface-raised and text-text-muted. index.css resets Tailwind's palette, so bg-white generates nothing, and themes.test.ts fails on a color anywhere else in src/web or vite.config.ts, or on a text and background pair below WEB-6. When the UI draws a new pair, add it to the test's list.
+- main.tsx imports zod-config.ts first, and nothing that reaches src/shared may go above it. Zod 4 probes for eval when it creates its first object schema, which the security policy reports as a violation, and `z.config({ jitless: true })` only prevents probes for schemas created after it runs.
+- The server's Content Security Policy allows only the app's own origin (SEC-8). It blocks eval and `new Function`, inline scripts, `<style>` elements, style attributes written into markup, and data: URLs. So Vite's `assetsInlineLimit` is 0, and Motion's `AnimatePresence mode="popLayout"`, which injects a `<style>`, is off-limits. Styles that React or Motion set through the DOM, such as the style prop, pass.
+- Testing Library's findBy* and waitFor hang under Vitest's fake timers, because they wait on a setTimeout that only Jest's clock advances. Settle with `await act(() => vi.advanceTimersByTimeAsync(ms))`, then query with getBy*. A test file that runs Motion animations installs fake timers once, in beforeAll: jsdom and Motion each keep one frame loop for the page, and a clock swapped out between tests leaves later tests without frames.
 - DATA_DIR defaults to data, the repo's gitignored data/ folder. The container must set DATA_DIR=/data, where Compose mounts the volume (step 1.8), or the database would live inside the container and be lost with it.
 
 @docs/coding-standards.md

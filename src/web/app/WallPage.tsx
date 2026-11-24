@@ -1,30 +1,62 @@
-import {
-  type ServerHealth,
-  useServerHealth,
-} from '../data/use-server-health.ts';
+import type { ReactNode } from 'react';
+import { StatusTile } from '../features/status/StatusTile.tsx';
+import { type WallCardSpec, WallGrid } from './WallGrid.tsx';
 
-/** The wall's placeholder, which shows that the page can reach the server. */
+/**
+ * The wall's cards in reading order. Placed on a 3 by 3 grid:
+ *
+ *   photos     photos     countdown
+ *   photos     photos     countdown
+ *   groceries  groceries  status
+ */
+export const WALL_CARDS: readonly WallCardSpec[] = [
+  {
+    id: 'photos',
+    title: 'Photos',
+    placement: 'col-span-2 row-span-2',
+    Content: PhotosPlaceholder,
+    isExpandable: true,
+  },
+  {
+    id: 'countdown',
+    title: 'Countdown',
+    placement: 'row-span-2',
+    Content: CountdownPlaceholder,
+    isExpandable: true,
+  },
+  {
+    id: 'groceries',
+    title: 'Groceries',
+    placement: 'col-span-2',
+    Content: GroceriesPlaceholder,
+    isExpandable: true,
+  },
+  {
+    id: 'status',
+    title: 'Status',
+    placement: '',
+    Content: StatusTile,
+    isExpandable: false,
+  },
+];
+
+/** The wall layout at /wall, for the 1920 by 1080 touchscreen. */
 export function WallPage() {
-  const health = useServerHealth();
-  return (
-    <main className="grid h-dvh place-items-center">
-      <div className="text-center">
-        <h1 className="text-7xl font-semibold">HomeHub</h1>
-        <p role="status" className="mt-8 text-4xl">
-          {describeHealth(health)}
-        </p>
-      </div>
-    </main>
-  );
+  return <WallGrid cards={WALL_CARDS} />;
 }
 
-function describeHealth(health: ServerHealth): string {
-  switch (health.state) {
-    case 'checking':
-      return 'Checking the server…';
-    case 'ok':
-      return `Server: ${health.response.status}`;
-    case 'unreachable':
-      return "Can't reach the server";
-  }
+function PhotosPlaceholder() {
+  return <Placeholder>Photos from Lightroom will appear here.</Placeholder>;
+}
+
+function CountdownPlaceholder() {
+  return <Placeholder>The next holidays will count down here.</Placeholder>;
+}
+
+function GroceriesPlaceholder() {
+  return <Placeholder>The grocery list will appear here.</Placeholder>;
+}
+
+function Placeholder({ children }: { readonly children: ReactNode }) {
+  return <p className="text-2xl text-text-muted">{children}</p>;
 }
