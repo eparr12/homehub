@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- A house on a filled square. The house stays inside the middle 80%, the
+       safe zone that a maskable icon's mask never cuts. -->
+  <rect width="512" height="512" fill="#0f766e" />
+  <path d="M256 112 400 240H360V392H152V240H112Z" fill="#ffffff" />
+  <rect x="226" y="300" width="60" height="92" fill="#0f766e" />
+</svg>

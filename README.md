@@ -15,6 +15,19 @@ The phone layout is at http://localhost:5173/ and the wall layout at http://loca
 
 The server keeps its SQLite database in data/homehub.db, and saves a backup in data/backups before each migration. The data/ folder is gitignored; set DATA_DIR to use another folder.
 
+## Try the installable app
+
+`npm run dev` never runs the service worker. To install HomeHub or load it offline, build it and serve the build:
+
+```sh
+npm run build    # the production web build into dist/web
+npm run preview  # dist/web on http://localhost:4173, with /api and /media forwarded to the API server
+```
+
+Run `npm run dev:server` alongside, so /api answers. The preview server doesn't send the API server's security headers, such as its Content Security Policy, so check what the policy blocks another way until the API server serves the build itself (build-plan step 1.8).
+
+The icons in src/web/public are made from icon.svg. After changing it, run `npm run icons` and commit the files it writes.
+
 ## Configure
 
 The server reads its settings from environment variables. `npm run dev` and `npm run dev:server` load them from a .env file in the repo folder, if there is one; in production, Compose will pass them in from the host's .env (build-plan step 1.8). The repo's .env is gitignored and holds only development values (SEC-1).

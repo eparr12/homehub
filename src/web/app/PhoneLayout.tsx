@@ -1,5 +1,7 @@
 import { Link, NavLink, Outlet } from 'react-router';
 import { OfflineBadge } from '../components/OfflineBadge.tsx';
+import { WALL_PATH } from './paths.ts';
+import { UpdatePrompt } from './UpdatePrompt.tsx';
 
 const VIEWS = [
   { path: '/', label: 'Groceries' },
@@ -13,7 +15,7 @@ const FOCUS_RING =
 /**
  * The phone layout: the current view above a bottom navigation, from 360 px
  * wide, with 48 px touch targets (WEB-7, WEB-10). NavLink marks the current
- * view with aria-current.
+ * view with aria-current, and a new version's prompt sits below the header.
  */
 export function PhoneLayout() {
   return (
@@ -24,13 +26,14 @@ export function PhoneLayout() {
           <OfflineBadge />
           {/* An installed app always opens at / and has no address bar. */}
           <Link
-            to="/wall"
+            to={WALL_PATH}
             className={`flex min-h-12 min-w-12 items-center justify-center rounded-lg text-text-muted underline underline-offset-4 ${FOCUS_RING}`}
           >
             Wall
           </Link>
         </div>
       </header>
+      <UpdatePrompt />
       <main className="flex-1 px-4 py-2">
         <Outlet />
       </main>
