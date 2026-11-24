@@ -1,5 +1,6 @@
 import type { RouteObject } from 'react-router';
 import { AppUpdates } from './AppUpdates.tsx';
+import { LayoutError } from './LayoutError.tsx';
 import { WALL_PATH } from './paths.ts';
 import { PhoneLayout } from './PhoneLayout.tsx';
 import { PhonePlaceholder } from './PhonePlaceholder.tsx';
@@ -11,10 +12,11 @@ import { WallPage } from './WallPage.tsx';
  * The phone views at /, /photos and /holidays, each with its own error
  * boundary inside the phone layout, and the wall layout at /wall (WEB-9).
  *
- * AppUpdates wraps them all and must stay mounted when a route throws, so
- * RouteError sits twice. On the child around the layouts, it catches a
- * layout that throws, below AppUpdates. On the root, it answers a path with
- * no route, which React Router reports there.
+ * AppUpdates wraps them all and must stay mounted when a layout throws, so
+ * two boundaries share the error page. LayoutError, on the child around the
+ * layouts, catches a layout that throws, below AppUpdates, and takes a new
+ * version at once. RouteError, on the root, answers a path with no route,
+ * which React Router reports there.
  */
 export const routes: RouteObject[] = [
   {
@@ -22,7 +24,7 @@ export const routes: RouteObject[] = [
     ErrorBoundary: RouteError,
     children: [
       {
-        ErrorBoundary: RouteError,
+        ErrorBoundary: LayoutError,
         children: [
           {
             Component: PhoneLayout,

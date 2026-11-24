@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { WALL_PATH } from './src/web/app/paths.ts';
 
 /** Where `npm run dev:server` listens: config.ts's default HOST and PORT. */
 const DEV_SERVER_ORIGIN = 'http://127.0.0.1:8080';
@@ -70,7 +71,7 @@ export default defineConfig({
             purpose: 'maskable',
           },
         ],
-        shortcuts: [{ name: 'Wall display', url: '/wall' }],
+        shortcuts: [{ name: 'Wall display', url: WALL_PATH }],
       },
       // The app shell and no runtime caching: Dexie is the offline store, so
       // /api is never cached, and step 5.3 adds the /media image cache.

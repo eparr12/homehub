@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Outlet, useMatch } from 'react-router';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { WALL_PATH } from './paths.ts';
@@ -49,9 +56,9 @@ interface Registration {
 /**
  * The root route's component: it registers the service worker, asks for a
  * new version every hour and whenever the page becomes visible, takes one at
- * once on the wall, and hands it to the phone layout's prompt. It stays
- * mounted when a route below it throws, so a wall that shows "Something went
- * wrong" still takes the fixed version.
+ * once on the wall, and hands it to the phone layout's prompt and to
+ * LayoutError. It stays mounted when a layout below it throws, so a page that
+ * shows "Something went wrong" still takes the fixed version.
  */
 export function AppUpdates() {
   const page = useBrowserPage();
@@ -68,31 +75,22 @@ export function AppUpdates() {
       console.error('service worker registration failed', error);
     },
   });
-
-  useEffect(() => {
-    if (registration === undefined) return;
-    return checkForUpdates(page.document, registration);
-  }, [page, registration]);
+  const apply = useApplyOnce(page, updateServiceWorker);
+  useUpdateChecks(page.document, registration);
 
   // Nobody stands at the wall to tap a prompt.
   useEffect(() => {
-    if (isWall && isReady) applyUpdate(page, updateServiceWorker);
-  }, [isWall, isReady, page, updateServiceWorker]);
+    if (isWall && isReady) apply();
+  }, [isWall, isReady, apply]);
 
-  const update: AppUpdate = {
-    isReady,
-    apply: () => {
-      applyUpdate(page, updateServiceWorker);
-    },
-  };
   return (
-    <AppUpdateContext value={update}>
+    <AppUpdateContext value={{ isReady, apply }}>
       <Outlet />
     </AppUpdateContext>
   );
 }
 
-/** The waiting version, for the phone layout's prompt. */
+/** The waiting version, for the phone layout's prompt and LayoutError. */
 export function useAppUpdate(): AppUpdate {
   const update = useContext(AppUpdateContext);
   if (update === null) {
@@ -107,6 +105,33 @@ function useBrowserPage(): BrowserPage {
     throw new Error('AppUpdates needs a BrowserPageContext above it');
   }
   return page;
+}
+
+/**
+ * applyUpdate for this page, once: on a wall that crashed, both the wall's
+ * effect and LayoutError apply, and the page must reload only once.
+ */
+function useApplyOnce(
+  page: BrowserPage,
+  updateServiceWorker: () => Promise<void>,
+): () => void {
+  const hasAppliedRef = useRef(false);
+  return useCallback(() => {
+    if (hasAppliedRef.current) return;
+    hasAppliedRef.current = true;
+    applyUpdate(page, updateServiceWorker);
+  }, [page, updateServiceWorker]);
+}
+
+/** Runs checkForUpdates once the worker is registered, until unmount. */
+function useUpdateChecks(
+  document: BrowserPage['document'],
+  registration: Registration | undefined,
+): void {
+  useEffect(() => {
+    if (registration === undefined) return;
+    return checkForUpdates(document, registration);
+  }, [document, registration]);
 }
 
 /**

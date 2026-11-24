@@ -122,7 +122,7 @@ async function renderRoute(
     TEST_ORIGIN,
     connectivity.trackFetch(answerHealthy),
   );
-  render(
+  const view = render(
     <BrowserPageContext value={page}>
       <ConnectivityContext value={connectivity}>
         <ApiClientContext value={client}>
@@ -134,6 +134,7 @@ async function renderRoute(
     </BrowserPageContext>,
   );
   await settle();
+  return view;
 }
 
 /** What the plugin does when it finds a new worker waiting. */
@@ -170,20 +171,31 @@ function findRoute(
   return undefined;
 }
 
-/** `tree` with the route at `path` swapped for one that throws. */
+/** `tree` with the route that `matches` picks swapped for one that throws. */
 function withBrokenRoute(
-  path: string,
+  matches: (route: RouteObject) => boolean,
   tree: readonly RouteObject[] = routes,
 ): RouteObject[] {
   return tree.map((route): RouteObject => {
     if (route.index === true) return route;
-    if (route.path === path) return { ...route, Component: Broken };
+    if (matches(route)) return { ...route, Component: Broken };
     if (route.children === undefined) return route;
-    return { ...route, children: withBrokenRoute(path, route.children) };
+    return { ...route, children: withBrokenRoute(matches, route.children) };
   });
 }
 
+const isWallRoute = (route: RouteObject) => route.path === WALL_PATH;
+const isPhoneLayout = (route: RouteObject) => route.Component === PhoneLayout;
+
 const reloadButton = () => screen.queryByRole('button', { name: 'Reload' });
+
+/** The phone layout's live region below the header, which holds the prompt. */
+function promptRegion(): HTMLElement | undefined {
+  const header = screen.getByRole('banner');
+  return screen
+    .getAllByRole('status')
+    .find((region) => !header.contains(region));
+}
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -383,12 +395,30 @@ describe('a new version', () => {
     }).toEqual({ hasPrompt: false, reloads: 1 });
   });
 
-  it('still reloads the wall after the wall page throws', async () => {
+  it('announces the prompt from a live region that was already in the page', async () => {
+    await renderRoute('/');
+    const region = promptRegion();
+    const textBefore = region?.textContent;
+
+    reportNewVersion();
+
+    expect({
+      textBefore,
+      isSameRegion: promptRegion() === region,
+      holdsReload:
+        region !== undefined &&
+        within(region).queryByRole('button', { name: 'Reload' }) !== null,
+    }).toEqual({ textBefore: '', isSameRegion: true, holdsReload: true });
+  });
+
+  // Both the wall's own effect and the error page take the new version, and
+  // the page reloads once.
+  it('still reloads the wall once after the wall page throws', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const fake = createFakePage();
     await renderRoute(WALL_PATH, {
       page: fake.page,
-      routeTree: withBrokenRoute(WALL_PATH),
+      routeTree: withBrokenRoute(isWallRoute),
     });
 
     reportNewVersion();
@@ -398,6 +428,42 @@ describe('a new version', () => {
       heading: screen.getByRole('heading').textContent,
       reloads: fake.reload.mock.calls.length,
     }).toEqual({ heading: 'Something went wrong', reloads: 1 });
+  });
+
+  // The error page replaces the layout and its prompt, and a broken page has
+  // nothing to keep.
+  it('reloads the phone without a prompt after its layout throws', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const fake = createFakePage();
+    await renderRoute('/', {
+      page: fake.page,
+      routeTree: withBrokenRoute(isPhoneLayout),
+    });
+
+    reportNewVersion();
+    fake.takeControl();
+
+    expect({
+      heading: screen.getByRole('heading').textContent,
+      reloads: fake.reload.mock.calls.length,
+    }).toEqual({ heading: 'Something went wrong', reloads: 1 });
+  });
+
+  it('logs a registration that fails', async () => {
+    const logError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    const failure = new TypeError('Failed to register a ServiceWorker');
+    await renderRoute('/');
+
+    act(() => {
+      pwa.options.onRegisterError?.(failure);
+    });
+
+    expect(logError).toHaveBeenCalledWith(
+      'service worker registration failed',
+      failure,
+    );
   });
 
   it('asks the server for one every hour', async () => {
@@ -439,5 +505,19 @@ describe('a new version', () => {
       checks: registration.update.mock.calls.length,
       warnings: warn.mock.calls.length,
     }).toEqual({ checks: 2, warnings: 1 });
+  });
+
+  it('stops asking once it unmounts', async () => {
+    const fake = createFakePage();
+    const registration = { update: vi.fn(() => Promise.resolve()) };
+    const { unmount } = await renderRoute(WALL_PATH, { page: fake.page });
+    finishRegistration(registration);
+
+    unmount();
+    await act(() => vi.advanceTimersByTimeAsync(UPDATE_CHECK_MS));
+    fake.setVisibility('hidden');
+    fake.setVisibility('visible');
+
+    expect(registration.update).not.toHaveBeenCalled();
   });
 });

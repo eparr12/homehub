@@ -291,7 +291,7 @@ Deploying:
 2. GitHub Actions builds the image and pushes ghcr.io/<you>/homehub with two tags: main and sha-<commit>. The package is public, so the host pulls without credentials.
 3. Every 5 minutes, the host's scheduled task runs `docker compose pull` and then `docker compose up -d`. Compose restarts the container only when the image changed.
 4. On start, the server applies any pending migrations, backing up the database first, and reports the new commit at /api/health.
-5. Open pages pick up the new build. Each asks for a new service worker every hour and whenever it becomes visible. The wall reloads into it at once; a phone shows a "new version" prompt and keeps the old version running until Reload is tapped.
+5. Open pages pick up the new build. Each asks for a new service worker every hour and whenever it becomes visible. The wall reloads into it at once; a phone shows a "new version" prompt and keeps the old version running until Reload is tapped. A page whose layout crashed reloads at once too, since it has nothing to keep.
 
 To roll back, set HOMEHUB_TAG to an older sha- tag in .env and run `docker compose up -d`. Migrations only add tables and columns (DATA-11), so the previous image still runs: it finds a schema newer than its own migrations, logs a warning and starts without migrating. There's no self-hosted CI runner: the repo is public, and a fork's pull request could run code on it.
 
