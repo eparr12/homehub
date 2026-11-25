@@ -45,6 +45,10 @@ const SHA = '0123456789abcdef0123456789abcdef01234567';
 const PULL_ERROR =
   'Error response from daemon: Get "https://ghcr.io/v2/": dial tcp: lookup ghcr.io: no such host';
 const UNHEALTHY = 'container homehub-homehub-1 is unhealthy';
+// Unlike the script's own 1, so the runner's `exit $LASTEXITCODE` can't pass
+// docker's exit code off as the script's.
+const PULL_EXIT_CODE = 18;
+const START_EXIT_CODE = 7;
 
 // Docker writes its progress to stderr, also when it succeeds.
 const UNCHANGED: Plan = {
@@ -64,7 +68,7 @@ const FAILED_PULL: Plan = {
   ...UNCHANGED,
   [PULL]: [
     {
-      exitCode: 1,
+      exitCode: PULL_EXIT_CODE,
       stdout: 'text on stdout\n',
       stderr: ` homehub Pulling\n${PULL_ERROR}\n`,
     },
@@ -74,7 +78,7 @@ const FAILED_START: Plan = {
   ...UNCHANGED,
   [UP]: [
     {
-      exitCode: 1,
+      exitCode: START_EXIT_CODE,
       stderr: ` Container homehub-homehub-1 Started\n${UNHEALTHY}\n`,
     },
   ],
@@ -101,7 +105,7 @@ function logLine(message: string): RegExp {
 }
 
 const FAILED_PULL_LINE = logLine(
-  `failed: docker ${PULL} failed with exit code 1: ${PULL_ERROR}`,
+  `failed: docker ${PULL} failed with exit code ${String(PULL_EXIT_CODE)}: ${PULL_ERROR}`,
 );
 
 /**
@@ -215,7 +219,8 @@ describe('update.ps1', { concurrent: true, timeout: 30_000 }, () => {
     const run = await runUpdate(REPLACED);
 
     expect(run.exitCode, run.output).toBe(0);
-    expect(run.folders).toEqual(run.commands.map(() => run.deployDir));
+    // A Set, so that a run in which no command ran at all fails too.
+    expect(new Set(run.folders)).toEqual(new Set([run.deployDir]));
     expect(run.leftInStartDir).toEqual([]);
   });
 
@@ -235,7 +240,9 @@ describe('update.ps1', { concurrent: true, timeout: 30_000 }, () => {
     expect(run.commands).toEqual([PS, PULL, UP]);
     expect(run.log).toHaveLength(1);
     expect(run.log[0]).toMatch(
-      logLine(`failed: docker ${UP} failed with exit code 1: ${UNHEALTHY}`),
+      logLine(
+        `failed: docker ${UP} failed with exit code ${String(START_EXIT_CODE)}: ${UNHEALTHY}`,
+      ),
     );
   });
 

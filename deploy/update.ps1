@@ -3,8 +3,8 @@
 Updates HomeHub on the host (build-plan step 1.8). Task Scheduler runs it every
 5 minutes from the deploy folder, beside compose.yaml and .env, as
 deploy/README.md sets up. It pulls the image that compose.yaml names, starts
-it and waits for it to report healthy, then removes the images that no
-container uses.
+it and waits for it to report healthy, then removes the untagged images that
+no container uses.
 
 It writes a line to update.log, beside itself, only for a new container, with
 its version, or for a failure. It stops at the first docker command that
