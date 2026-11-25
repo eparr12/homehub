@@ -4,6 +4,13 @@ import { expect, test } from './fixtures.ts';
 // The guard asserts as each test ends, on the app's page under the server's
 // real Content Security Policy.
 
+// Late enough to miss a guard that compares as the test ends, and well inside
+// the guard's wait.
+const LATE_PROBLEM_MS = 300;
+// For the test whose expected problem never happens, which waits the whole
+// time in each project.
+const SHORT_PROBLEM_WAIT_MS = 200;
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('navigation', { name: 'Views' })).toBeVisible();
@@ -56,4 +63,35 @@ test('records a console error, an uncaught error and a policy violation that a t
         document.head.append(script);
       }),
   );
+});
+
+test('passes a test with one expected problem at once and one after its last line', async ({
+  page,
+  expectProblem,
+}) => {
+  // One problem is in when the test ends and one is late, as when WebKit
+  // reports its JSON view's console error at once and the violation after the
+  // navigation: the guard waits until every expected problem is in.
+  expectProblem(/^console error.*: at once on purpose$/);
+  expectProblem(/^console error.*: late on purpose$/);
+
+  await page.evaluate((delay) => {
+    console.error('at once on purpose');
+    setTimeout(() => {
+      console.error('late on purpose');
+    }, delay);
+  }, LATE_PROBLEM_MS);
+});
+
+test.describe('with the wait cut short', () => {
+  test.use({ expectedProblemWait: SHORT_PROBLEM_WAIT_MS });
+
+  test('fails a test whose expected problem never happens', ({
+    expectProblem,
+  }) => {
+    // Passes only if the test fails, which only the guard can make it do.
+    test.fail();
+
+    expectProblem(/^console error.*: never on purpose$/);
+  });
 });

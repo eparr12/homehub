@@ -37,10 +37,11 @@ jobs:
   e2e:
     runs-on: ubuntu-26.04
     # A backstop for a hung job, not a budget. It has to outlast a run of
-    # failing tests, so that the job ends as failed and uploads its report: all
-    # 40 tests at their 30 s timeout would take about 11.5 minutes on two
-    # workers. Raise it, or cap failures in Playwright, before the suite passes
-    # about 50 tests.
+    # failing tests, so that the job ends as failed and uploads its report. A
+    # test that hits its 30 s timeout adds about 15 s on two workers, so the
+    # limit covers a run in which every test does only while the suite has
+    # fewer than about 50 tests. Raise it before the suite reaches 50, or cap
+    # failures in Playwright once build-plan step 2.7 has chosen how.
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
