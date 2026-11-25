@@ -34,7 +34,16 @@
       "Read(**/.env*)",
       "Read(/data/**)",
       "PowerShell(Get-Content *.env*)",
-      "PowerShell(Select-String *.env*)"
+      "PowerShell(Select-String *.env*)",
+      "Read(//c/HomeHub/**)",
+      "Bash(docker compose down *)",
+      "PowerShell(docker compose down *)",
+      "Bash(docker volume rm *)",
+      "PowerShell(docker volume rm *)",
+      "Bash(docker volume prune *)",
+      "PowerShell(docker volume prune *)",
+      "Bash(docker system prune *)",
+      "PowerShell(docker system prune *)"
     ],
     "blockReadsOutsideWorkingDirectories": false,
     "disableBypassPermissionsMode": "disable"
