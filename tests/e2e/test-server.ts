@@ -2,8 +2,8 @@
 // playwright.config.ts, start-server.ts and the specs.
 
 /**
- * The test server's own port. Never 8080, which `npm run dev` holds, as the
- * container on the desktop will from step 1.8.
+ * The test server's own port. Never 8081, which `npm run dev` holds, or 8080,
+ * which the container holds on the desktop.
  */
 export const TEST_SERVER_PORT = 8181;
 
