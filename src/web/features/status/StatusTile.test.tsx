@@ -41,6 +41,7 @@ const OK_TEXT = 'Server and database OK';
 const DATABASE_FAILED_TEXT = 'Server is up, but its database check failed';
 const UNREACHABLE_TEXT = "Can't reach the server";
 const IMAGE_VERSION_TEXT = 'Version 0123456';
+const DEV_VERSION_TEXT = 'Version dev';
 
 const answerHealthy: typeof fetch = () =>
   Promise.resolve(Response.json(HEALTHY));
@@ -138,6 +139,14 @@ describe('StatusTile', () => {
     await advance();
 
     expect(versionText()).toBe(IMAGE_VERSION_TEXT);
+  });
+
+  it('shows the version when the server answers 503', async () => {
+    renderTile(answerDatabaseFailed);
+
+    await advance();
+
+    expect(versionText()).toBe(DEV_VERSION_TEXT);
   });
 
   it('shows no version until the server answers', async () => {
