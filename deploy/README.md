@@ -56,6 +56,7 @@ compose.yaml and update.ps1 reach the host only when you copy them, so what the 
 
    The exit code is 0, the log has one line, such as `2026-11-25T17:20:10Z new container, version 7a89aa25272ef1bc0201c37e297b0f45ab22b435`, and /api/health reports the same version: the commit that main's image was built from.
 6. Register the task, below.
+7. Publish HomeHub on the tailnet: see Publishing on the tailnet.
 
 ## The task
 
@@ -124,3 +125,45 @@ HOMEHUB_TAG=sha-1a2b3c4
 ```
 
 The task's next run starts that image, or `Start-ScheduledTask -TaskName 'HomeHub update'` starts a run now. Migrations only add tables and columns (DATA-11), so an older image still runs on a newer database. To go forward again, delete the line, and the next run starts main's image.
+
+## Publishing on the tailnet
+
+Tailscale Serve publishes HomeHub to the tailnet at `https://homehub.<tailnet>.ts.net` and passes each request to the container on 127.0.0.1:8080 ([the tailscale serve command](https://tailscale.com/docs/reference/tailscale-cli/serve)). In a PowerShell window on the host, which needn't be elevated, publish it and read the setting back:
+
+```powershell
+tailscale serve --bg --https=443 http://127.0.0.1:8080
+tailscale serve status
+```
+
+The status reads:
+
+```text
+https://homehub.<tailnet>.ts.net (tailnet only)
+|-- / proxy http://127.0.0.1:8080
+```
+
+It must say tailnet only. Never turn on Funnel, which would put HomeHub on the internet (SEC-2). If the status ever says anything else, run `tailscale serve reset`, then publish again. `--bg` keeps the setting across restarts. Tailscale on Windows runs in your session, like Docker Desktop, so the address answers once you've signed in. To stop publishing, run `tailscale serve --https=443 off`.
+
+What Serve does to a request:
+
+- **It replaces any identity header that a client sends with its own.** From a device on the tailnet, /api/me gave the same answer with a forged `Tailscale-User-Login` or `Tailscale_User_Login` header as without one.
+- **It sets none for a tagged device**, as [Tailscale's Serve page](https://tailscale.com/kb/1312/serve) says.
+- **It compresses nothing.** The app's script came back whole, with no Content-Encoding, to a request that accepted gzip and br.
+
+## Who may use it
+
+A person needs a device on the tailnet, signed in to Tailscale as themselves, and their pair in ALLOWED_USERS:
+
+1. Invite them from the admin console's Users page ([Tailscale's guide](https://tailscale.com/kb/1371/invite-users)). They accept the invite in a browser before they sign in to the Tailscale app.
+2. Add their pair to ALLOWED_USERS in C:\HomeHub\.env, as in step 4, with the login as the Users page shows it. The task's next run replaces the container and logs a `new container` line.
+3. On their device, open `https://homehub.<tailnet>.ts.net/api/me`, which shows their short name. That's the check, because a device whose login isn't on the list still gets every page of the app, installs it and loads it offline; only /api/me answers it with a 401.
+
+A line the server can't read stops HomeHub. Every run then logs a `failed: docker compose up` line in update.log, and `docker logs homehub-homehub-1 --tail 5` shows the server's `invalid configuration` lines. Each one's error field names the variable and the entry, such as `Entry 2 isn't a login=shortname pair`, never a login. Fix the line, and the next run starts HomeHub again.
+
+A 401 carries a requestId. The server's log line with that ID gives the reason, never the login: `login not on ALLOWED_USERS`, or `login header missing` for a tagged device or a request that didn't come through Serve.
+
+```powershell
+docker logs homehub-homehub-1 | Select-String <requestId>
+```
+
+A lost phone is removed from the tailnet in the admin console the same day (SEC-11).

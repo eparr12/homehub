@@ -68,7 +68,32 @@ Dependabot (.github/dependabot.yml) checks npm packages, GitHub Actions and the 
 
 ## Deploy
 
-Every merge to main deploys itself. CI pushes the image to GHCR, and on the desktop a scheduled task runs deploy/update.ps1 every 5 minutes, which pulls the image and starts it. deploy/README.md sets up the host: the deploy folder, its .env, the task, the log, and how to roll back.
+Every merge to main deploys itself. CI pushes the image to GHCR, and on the desktop a scheduled task runs deploy/update.ps1 every 5 minutes, which pulls the image and starts it. deploy/README.md sets up the host: the deploy folder, its .env, the task, the log, and how to roll back. Its Publishing on the tailnet section puts HomeHub at its address, and Who may use it adds a person.
+
+## Put it on a phone or the wall
+
+Each device opens HomeHub at `https://homehub.<tailnet>.ts.net`. A new person first needs what deploy/README.md's Who may use it lists.
+
+### A phone
+
+Open the address in the phone's browser, then install it:
+
+- **iPhone:** in Safari, tap Share, then Add to Home Screen, and leave Open as Web App on.
+- **Android:** in Chrome, open the menu, tap Add to Home screen, then Install.
+
+Open HomeHub once from its icon while online before you count on it offline. The check is /api/me at the address in the browser, which shows your short name. To keep Tailscale connected, follow Phones stay connected under Access: private by design in docs/project-overview.md.
+
+### The wall, until Phase 6
+
+Until the mini PC arrives in Phase 6, the UPERFECT is the desktop's second screen:
+
+1. Connect it with HDMI for the picture and a USB cable for touch.
+2. In Windows' display settings, extend the desktop onto it, in landscape at 1920 by 1080, 120 Hz and 100% scale. The wall is built and tested at that size (WEB-10).
+3. Map the touch to it: run `multidigimon -touch` and follow its prompts.
+4. In Edge, install HomeHub as an app, open it and select Wall, then drag its window onto the UPERFECT and press F11 for full screen.
+5. Keep the screens on: `powercfg /change monitor-timeout-ac 0`.
+
+What the desktop can't do: its lock screen shows on the UPERFECT too, and after a restart the wall is back only once you've signed in and opened it.
 
 ## Configure
 
