@@ -20,7 +20,9 @@ FROM base AS runtime
 # docker run -P would publish the port on every interface (SEC-2).
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=8080 DATA_DIR=/data
 COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
+# Keeps npm's download cache, and the compile cache that it writes to /tmp,
+# out of the image.
+RUN --mount=type=cache,target=/root/.npm --mount=type=tmpfs,target=/tmp npm ci --omit=dev
 # A new volume takes its owner from the folder it's mounted on, so this is
 # what lets node write to the database volume.
 RUN mkdir /data && chown node:node /data
