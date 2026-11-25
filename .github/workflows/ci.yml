@@ -1,6 +1,7 @@
-# The CI gates in docs/coding-standards.md. The main ruleset requires the check
-# and e2e jobs by name, so neither job has a name: key, and pull_request has no
-# filter: a required job that never starts leaves a pull request waiting.
+# The CI gates in docs/coding-standards.md. The main ruleset requires the
+# check, e2e and image jobs by name, so no job has a name: key, and
+# pull_request has no filter: a required job that never starts leaves a pull
+# request waiting.
 name: CI
 
 on:
@@ -8,7 +9,8 @@ on:
   push:
     branches: [main]
 
-# A read-only token for every job, and no secrets (SEC-1).
+# A read-only token for every job that doesn't ask for more, and no secret but
+# that token (SEC-1).
 permissions:
   contents: read
 
@@ -64,3 +66,67 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
+
+  # Builds the image, starts it as the host runs it, and on main pushes it to
+  # GHCR. Only the runner's own docker commands, and no docker/* actions, so no
+  # third-party code runs with a token that can write packages.
+  image:
+    runs-on: ubuntu-26.04
+    # A backstop for a hung job, not a budget.
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    defaults:
+      run:
+        # Named, because only then does GitHub add pipefail, which the smoke
+        # test's pipes need.
+        shell: bash
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: docker build --check .
+      - run: docker build --build-arg "GIT_SHA=$GITHUB_SHA" --tag "$IMAGE:main" .
+      # Starts the image as the host runs it, through compose.yaml itself,
+      # which finds this build under the tag it asks for; --pull never makes
+      # sure that nothing else gets tested. A build alone proves too little:
+      # one with a runtime package in devDependencies passes check and e2e,
+      # then exits as it starts. The backups folder is made writable first,
+      # because one that Docker makes belongs to root, and the server stops.
+      - name: Smoke test
+        id: smoke
+        run: |
+          install -d -m 0777 data/backups
+          echo 'ALLOWED_USERS=ci@example.com=ci' > .env
+          docker compose up --detach --wait --wait-timeout 60 --pull never
+          test "$(docker compose exec -T homehub id -un)" = node
+          curl --fail --silent --show-error http://127.0.0.1:8080/api/health |
+            jq --exit-status --arg sha "$GITHUB_SHA" '.status == "ok" and .version == $sha'
+          curl --fail --silent --show-error --header 'Tailscale-User-Login: ci@example.com' \
+            http://127.0.0.1:8080/api/me | jq --exit-status '.shortName == "ci"'
+          curl --fail --silent --show-error http://127.0.0.1:8080/ | grep --quiet '<div id="root">'
+          docker compose stop
+          test "$(docker inspect --format '{{.State.ExitCode}}' "$(docker compose ps --all --quiet)")" = 0
+      # Only the smoke test leaves a container to read.
+      - if: failure() && steps.smoke.outcome == 'failure'
+        run: docker compose logs
+      # Every commit on main gets its sha- tag. Runs for two quick merges can
+      # finish in either order, so the main tag moves only while main still
+      # names this commit, and never back to an older one.
+      - name: Push
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker tag "$IMAGE:main" "$IMAGE:sha-${GITHUB_SHA::7}"
+          docker push "$IMAGE:sha-${GITHUB_SHA::7}"
+          main_now="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$main_now" = "$GITHUB_SHA" ]; then
+            docker push "$IMAGE:main"
+          else
+            echo "main has moved on to $main_now, so its run moves the main tag"
+          fi

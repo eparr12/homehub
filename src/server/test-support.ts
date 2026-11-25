@@ -15,6 +15,9 @@ export const ALLOWED_USERS: AllowedUsers = new Map([
   ['zoë@example.com', 'zoe'],
 ]);
 
+/** The version that test apps report, a made-up commit like an image's GIT_SHA. */
+export const TEST_VERSION = '0123456789abcdef0123456789abcdef01234567';
+
 /**
  * Matches any number in an expected value. Typed unknown because expect.any()
  * returns `any`, which strict linting refuses inside an object (TS-1).
@@ -63,8 +66,8 @@ export async function openMigratedDatabase(): Promise<Database.Database> {
 }
 
 /**
- * Builds the app on a migrated in-memory database, allowing ALLOWED_USERS,
- * with whatever dependencies the test overrides.
+ * Builds the app on a migrated in-memory database, allowing ALLOWED_USERS and
+ * reporting TEST_VERSION, with whatever dependencies the test overrides.
  */
 export async function createTestApp(
   overrides: Partial<AppDependencies> = {},
@@ -73,6 +76,7 @@ export async function createTestApp(
     db: await openMigratedDatabase(),
     log: captureLogs().log,
     allowedUsers: ALLOWED_USERS,
+    version: TEST_VERSION,
     ...overrides,
   });
 }

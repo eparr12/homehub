@@ -10,8 +10,16 @@ const TEST_ORIGIN = 'http://homehub.test';
 const HTTP_INTERNAL_SERVER_ERROR = 500;
 const HTTP_BAD_GATEWAY = 502;
 const HTTP_SERVICE_UNAVAILABLE = 503;
-const HEALTHY: HealthResponse = { status: 'ok', database: 'ok' };
-const DATABASE_FAILED: HealthResponse = { status: 'error', database: 'error' };
+const HEALTHY: HealthResponse = {
+  status: 'ok',
+  database: 'ok',
+  version: 'dev',
+};
+const DATABASE_FAILED: HealthResponse = {
+  status: 'error',
+  database: 'error',
+  version: 'dev',
+};
 // What app.onError answers: JSON, but not a health report.
 const SERVER_PROBLEM: Problem = {
   type: 'about:blank',

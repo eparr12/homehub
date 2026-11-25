@@ -104,7 +104,7 @@ One SQLite file, opened by one server process, is the source of truth.
 - **DATA-6** SQL uses prepared statements with bound parameters; never build SQL by concatenating values. PRAGMA values, which can't be bound, come only from constants in code.
 - **DATA-7** A write that touches more than one row or table runs inside one `db.transaction()`. Transaction functions are synchronous: never pass an async function or await inside one. better-sqlite3 throws when the function returns a promise, and any code after the first await would run outside the transaction.
 - **DATA-8 (SHOULD)** Index the columns used for filters, joins and sync cursors, such as sync_version, and check new queries with EXPLAIN QUERY PLAN.
-- **DATA-9** The database file, its -wal and -shm files and its backups live on a local disk inside the data volume, never on a network share or in a cloud-synced folder such as OneDrive; both corrupt SQLite.
+- **DATA-9** The database file and its -wal and -shm files live on a disk that's local to the system that opens them: never on a network share, never in a cloud-synced folder such as OneDrive, and under Docker Desktop never in a folder shared from the host, where SQLite's locks and write-ahead log can't be trusted. There the database sits in a Docker volume. Backups are finished files and may sit in a host folder on a local disk.
 - **DATA-10** Backups use SQLite's online backup (`db.backup()`) or `VACUUM INTO`, never a file copy of a live database, and a restore is tested after any change to the backup code.
 - **DATA-11 (SHOULD)** Migrations are additive: add tables and columns in one release and remove old ones in a later release, so the previous image still runs if you roll back.
 
@@ -252,14 +252,14 @@ tsconfig.base.json:
 - Vitest runs two projects: node (src/shared, src/server) and web (src/web, jsdom, fake-indexeddb, Testing Library).
 - Coverage uses @vitest/coverage-v8 and is on only when CI is set, so `npm run check` stays one command; `npm run test -- --coverage` prints it locally. It counts every file under src except src/server/test-support.ts, so a module no test imports shows at 0%, and prints a text table with no thresholds, so it never fails a run (TEST-3).
 - Playwright runs three projects: wall (Chromium at 1920 by 1080), iPhone (WebKit) and Android (Chromium, Pixel viewport), with @axe-core/playwright for accessibility.
-- Dependabot (.github/dependabot.yml) checks npm and GitHub Actions weekly and offers only releases at least 7 days old; security updates don't wait. In each, one group holds every minor and patch update, so a major always comes alone. It ignores majors of typescript (see above) and @types/node, whose major follows .nvmrc. Titles read build(deps), build(deps-dev) for devDependencies, or ci(deps) (GIT-3).
+- Dependabot (.github/dependabot.yml) checks npm, GitHub Actions and the Dockerfile's base image weekly and offers only releases at least 7 days old; security updates don't wait. In npm and GitHub Actions, one group holds every minor and patch update, so a major always comes alone. It ignores majors of typescript (see above), and of @types/node and the node base image, whose majors follow .nvmrc. Titles read build(deps), build(deps-dev) for devDependencies, or ci(deps) (GIT-3).
 
 CI gates on every pull request; all must pass to merge:
 
 1. `npm ci`, then `npm run check` (typecheck, lint, format, unit tests with coverage).
 2. `npm run e2e`, with the Playwright report uploaded as an artifact when the run fails.
 3. `npm audit --audit-level=high`.
-4. The Docker image builds (pushing to GHCR happens only on main).
+4. The Docker image builds, starts as the host runs it, and answers (pushing to GHCR happens only on main).
 5. CodeQL default setup and secret scanning run alongside, from the repository's security settings.
 
 ## Code reviews

@@ -1,0 +1,15 @@
+# An allowlist: nothing goes into the build unless it's named here, so a new
+# file or folder at the repo root, such as .env or data/, stays out of the
+# image until this file names it (SEC-1, GIT-7).
+*
+!package.json
+!package-lock.json
+!vite.config.ts
+!tsconfig.base.json
+!src
+
+# The tests and their helpers, which neither the build nor the server needs.
+**/*.test.ts
+**/*.test.tsx
+src/server/test-support.ts
+src/web/test-setup.ts

@@ -7,6 +7,7 @@ import {
   captureLogs,
   createTestApp,
   openMigratedDatabase,
+  TEST_VERSION,
 } from './test-support.ts';
 
 // Hono's method for middleware added with use() and handlers added with all().
@@ -15,11 +16,12 @@ const ANY_METHOD = 'ALL';
 const PATH_PATTERN_PARTS = /:[^/]+|\*/g;
 
 describe('GET /api/health', () => {
-  it('reports that the server and its database are ok', async () => {
+  it('reports its version and that the server and its database are ok', async () => {
     const app = createApp({
       db: await openMigratedDatabase(),
       log: captureLogs().log,
       allowedUsers: ALLOWED_USERS,
+      version: TEST_VERSION,
     });
 
     const response = await app.request('/api/health');
@@ -28,16 +30,18 @@ describe('GET /api/health', () => {
     expect(healthResponseSchema.parse(await response.json())).toEqual({
       status: 'ok',
       database: 'ok',
+      version: TEST_VERSION,
     });
   });
 
-  it('answers 503 with only the status fields when the database fails', async () => {
+  it('answers 503 with only the status fields and its version when the database fails', async () => {
     const db = await openMigratedDatabase();
     db.close();
     const app = createApp({
       db,
       log: captureLogs().log,
       allowedUsers: ALLOWED_USERS,
+      version: TEST_VERSION,
     });
 
     const response = await app.request('/api/health');
@@ -48,6 +52,7 @@ describe('GET /api/health', () => {
     expect(await response.json()).toEqual({
       status: 'error',
       database: 'error',
+      version: TEST_VERSION,
     });
   });
 
@@ -55,7 +60,12 @@ describe('GET /api/health', () => {
     const db = await openMigratedDatabase();
     db.close();
     const { log, lines } = captureLogs();
-    const app = createApp({ db, log, allowedUsers: ALLOWED_USERS });
+    const app = createApp({
+      db,
+      log,
+      allowedUsers: ALLOWED_USERS,
+      version: TEST_VERSION,
+    });
 
     await app.request('/api/health');
 

@@ -4,7 +4,7 @@ import { parseConfig } from './config.ts';
 const ALLOWED_USERS = 'alex@example.com=alex';
 
 describe('parseConfig', () => {
-  it('listens on 127.0.0.1:8080 and keeps data in "data" when only ALLOWED_USERS is set', () => {
+  it('listens on 127.0.0.1:8080, keeps data in "data" and reports version dev when only ALLOWED_USERS is set', () => {
     expect(parseConfig({ ALLOWED_USERS })).toEqual({
       ok: true,
       value: {
@@ -13,16 +13,18 @@ describe('parseConfig', () => {
         dataDir: 'data',
         allowedUsers: new Map([['alex@example.com', 'alex']]),
         devUser: undefined,
+        version: 'dev',
       },
     });
   });
 
-  it('reads HOST, PORT and DATA_DIR from the environment', () => {
+  it('reads HOST, PORT, DATA_DIR and GIT_SHA from the environment', () => {
     expect(
       parseConfig({
         HOST: '0.0.0.0',
         PORT: '3000',
         DATA_DIR: '/data',
+        GIT_SHA: '0123456789abcdef0123456789abcdef01234567',
         ALLOWED_USERS,
       }),
     ).toEqual({
@@ -33,6 +35,7 @@ describe('parseConfig', () => {
         dataDir: '/data',
         allowedUsers: new Map([['alex@example.com', 'alex']]),
         devUser: undefined,
+        version: '0123456789abcdef0123456789abcdef01234567',
       },
     });
   });
@@ -42,6 +45,14 @@ describe('parseConfig', () => {
 
     assert(!result.ok);
     expect(result.error).toContain('DATA_DIR');
+  });
+
+  // An image built with an empty GIT_SHA would otherwise report no version.
+  it('rejects an empty GIT_SHA, naming the variable', () => {
+    const result = parseConfig({ GIT_SHA: '', ALLOWED_USERS });
+
+    assert(!result.ok);
+    expect(result.error).toContain('GIT_SHA');
   });
 
   it('rejects a PORT outside the TCP port range, naming the variable', () => {

@@ -29,7 +29,11 @@ import { routes } from './routes.tsx';
 import { ViewError } from './ViewError.tsx';
 
 const TEST_ORIGIN = 'http://homehub.test';
-const HEALTHY: HealthResponse = { status: 'ok', database: 'ok' };
+const HEALTHY: HealthResponse = {
+  status: 'ok',
+  database: 'ok',
+  version: 'dev',
+};
 const WALL_CARDS = ['Photos', 'Countdown', 'Groceries', 'Status'];
 const SW_URL = '/sw.js';
 
