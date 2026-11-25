@@ -33,6 +33,7 @@ const EXPECTED_PROBLEM_CHECK_MS = 25;
  */
 export const test = base.extend<{
   expectProblem: ExpectProblem;
+  /** The longest the guard waits for an expected problem, in milliseconds. */
   expectedProblemWait: number;
 }>({
   // An option, so that a test of the guard can cut the wait short.

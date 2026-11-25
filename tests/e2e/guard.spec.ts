@@ -65,13 +65,18 @@ test('records a console error, an uncaught error and a policy violation that a t
   );
 });
 
-test('passes a test whose expected problem arrives after its last line', async ({
+test('passes a test with one expected problem at once and one after its last line', async ({
   page,
   expectProblem,
 }) => {
+  // One problem is in when the test ends and one is late, as when WebKit
+  // reports its JSON view's console error at once and the violation after the
+  // navigation: the guard waits until every expected problem is in.
+  expectProblem(/^console error.*: at once on purpose$/);
   expectProblem(/^console error.*: late on purpose$/);
 
   await page.evaluate((delay) => {
+    console.error('at once on purpose');
     setTimeout(() => {
       console.error('late on purpose');
     }, delay);
