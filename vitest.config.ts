@@ -16,6 +16,20 @@ if (process.platform === 'win32' && LOWERCASE_DRIVE_LETTER.test(cwd)) {
 
 export default defineConfig({
   test: {
+    // On only in CI, as forbidOnly is in playwright.config.ts, so `npm run
+    // check` stays one command for everyone; `npm run test -- --coverage`
+    // prints the table locally. No thresholds: the number is a signal, not a
+    // target (TEST-3).
+    coverage: {
+      enabled: Boolean(process.env.CI),
+      // Every source file counts, so a module that no test imports shows at
+      // 0% instead of going missing from the table. Vitest leaves out the
+      // test files and setup files itself; test-support.ts holds the server
+      // tests' helpers, which aren't code under test.
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/server/test-support.ts'],
+      reporter: ['text'],
+    },
     projects: [
       {
         test: {

@@ -45,6 +45,24 @@ npx playwright show-report   # open the last run's report, from playwright-repor
 
 The test server is the real one in production mode, with a new e2e-data/ folder for each run and a made-up login as its only allowed user, so it never touches data/. It needs port 8181 free. To run one project, add its name: `npm run e2e -- --project=iphone`.
 
+## Continuous integration
+
+GitHub Actions runs .github/workflows/ci.yml on every pull request and every push to main. A pull request merges only when both of its jobs pass:
+
+- **check**: `npm ci`, `npm run check`, which prints a coverage table when CI is set, and `npm audit --audit-level=high`.
+- **e2e**: `npm ci`, Chromium and WebKit with the system packages they need, and `npm run e2e`.
+
+When e2e fails, the run's Summary page lists the Playwright report under Artifacts as playwright-report, kept for 14 days. Anyone signed in to GitHub can download it, so tests use only made-up data. To open it, download it into a folder named for the run, because gh won't overwrite an existing file, such as a local report's index.html:
+
+```sh
+gh run download <run-id> -n playwright-report -D playwright-report/<run-id>
+npx playwright show-report playwright-report/<run-id>
+```
+
+The next local `npm run e2e` deletes the whole playwright-report/ folder, downloads included, so they don't pile up.
+
+Dependabot (.github/dependabot.yml) checks npm packages and GitHub Actions every Monday and opens pull requests only for releases at least 7 days old: one for each ecosystem's minor and patch updates, and one for each major. Dependabot alerts report a vulnerable dependency at once, and a security update pull request follows an alert without the 7-day wait.
+
 ## Configure
 
 The server reads its settings from environment variables. `npm run dev` and `npm run dev:server` load them from a .env file in the repo folder, if there is one; in production, Compose will pass them in from the host's .env (build-plan step 1.8). The repo's .env is gitignored and holds only development values (SEC-1).
