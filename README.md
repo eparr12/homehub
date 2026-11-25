@@ -52,14 +52,16 @@ GitHub Actions runs .github/workflows/ci.yml on every pull request and every pus
 - **check**: `npm ci`, `npm run check`, which prints a coverage table when CI is set, and `npm audit --audit-level=high`.
 - **e2e**: `npm ci`, Chromium and WebKit with the system packages they need, and `npm run e2e`.
 
-When e2e fails, the run's Summary page lists the Playwright report under Artifacts as playwright-report, kept for 14 days. Anyone signed in to GitHub can download it, so tests use only made-up data. To open it:
+When e2e fails, the run's Summary page lists the Playwright report under Artifacts as playwright-report, kept for 14 days. Anyone signed in to GitHub can download it, so tests use only made-up data. To open it, download it into a folder named for the run, because gh won't overwrite an existing file, such as a local report's index.html:
 
 ```sh
-gh run download <run-id> -n playwright-report -D playwright-report
-npx playwright show-report
+gh run download <run-id> -n playwright-report -D playwright-report/<run-id>
+npx playwright show-report playwright-report/<run-id>
 ```
 
-Dependabot (.github/dependabot.yml) checks npm packages and GitHub Actions every Monday and opens pull requests only for releases at least 7 days old: one for each ecosystem's minor and patch updates, and one for each major. Dependabot alerts report a vulnerable dependency at once; security update pull requests are off in the repository's settings.
+The next local `npm run e2e` deletes the whole playwright-report/ folder, downloads included, so they don't pile up.
+
+Dependabot (.github/dependabot.yml) checks npm packages and GitHub Actions every Monday and opens pull requests only for releases at least 7 days old: one for each ecosystem's minor and patch updates, and one for each major. Dependabot alerts report a vulnerable dependency at once, and a security update pull request follows an alert without the 7-day wait.
 
 ## Configure
 

@@ -17,9 +17,8 @@ jobs:
     # Not ubuntu-latest: that label moves on GitHub's schedule, which would
     # change the system we test on a day nobody chose.
     runs-on: ubuntu-26.04
-    # About three times the job's run time (34 s on its first run), so a hung
-    # step fails fast. Raise it as the job grows.
-    timeout-minutes: 2
+    # A backstop for a hung job, not a budget.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
@@ -37,8 +36,12 @@ jobs:
 
   e2e:
     runs-on: ubuntu-26.04
-    # About three times the job's run time (1 min 16 s on its first run).
-    timeout-minutes: 4
+    # A backstop for a hung job, not a budget. It has to outlast a run of
+    # failing tests, so that the job ends as failed and uploads its report: all
+    # 40 tests at their 30 s timeout would take about 11.5 minutes on two
+    # workers. Raise it, or cap failures in Playwright, before the suite passes
+    # about 50 tests.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
