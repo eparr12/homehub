@@ -24,6 +24,17 @@ test('reports the server and its database OK in the status tile', async ({
   ]);
 });
 
+test('shows the version that the server reports in the status tile', async ({
+  page,
+}) => {
+  const statusCard = page.getByRole('region', { name: 'Status' });
+
+  // dev, because the test server's launcher removes GIT_SHA.
+  await expect(
+    statusCard.getByText('Version dev', { exact: true }),
+  ).toBeVisible();
+});
+
 test('fills 1920 by 1080 without scrolling', async ({ page }) => {
   expect(await readOverflow(page)).toEqual({ x: 0, y: 0 });
 });

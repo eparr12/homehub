@@ -20,6 +20,15 @@ const DATABASE_FAILED: HealthResponse = {
   database: 'error',
   version: 'dev',
 };
+// What an image reports: the commit it was built from.
+const FROM_IMAGE: HealthResponse = {
+  ...HEALTHY,
+  version: '0123456789abcdef0123456789abcdef01234567',
+};
+const NO_VERSION: Omit<HealthResponse, 'version'> = {
+  status: 'ok',
+  database: 'ok',
+};
 // What app.onError answers: JSON, but not a health report.
 const SERVER_PROBLEM: Problem = {
   type: 'about:blank',
@@ -31,9 +40,15 @@ const CHECKING_TEXT = 'Checking the server…';
 const OK_TEXT = 'Server and database OK';
 const DATABASE_FAILED_TEXT = 'Server is up, but its database check failed';
 const UNREACHABLE_TEXT = "Can't reach the server";
+const IMAGE_VERSION_TEXT = 'Version 0123456';
+const DEV_VERSION_TEXT = 'Version dev';
 
 const answerHealthy: typeof fetch = () =>
   Promise.resolve(Response.json(HEALTHY));
+const answerFromImage: typeof fetch = () =>
+  Promise.resolve(Response.json(FROM_IMAGE));
+const answerNoVersion: typeof fetch = () =>
+  Promise.resolve(Response.json(NO_VERSION));
 const answerDatabaseFailed: typeof fetch = () =>
   Promise.resolve(
     Response.json(DATABASE_FAILED, { status: HTTP_SERVICE_UNAVAILABLE }),
@@ -70,6 +85,7 @@ async function advance(ms = 0): Promise<void> {
 }
 
 const statusText = () => screen.getByRole('status').textContent;
+const versionText = () => screen.queryByText(/^Version /)?.textContent ?? null;
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -108,12 +124,37 @@ describe('StatusTile', () => {
     { case: 'the request gets no answer', network: noAnswer },
     { case: 'a proxy answers with its error page', network: proxyErrorPage },
     { case: 'the server answers with a problem', network: answerProblem },
+    { case: 'the answer has no version', network: answerNoVersion },
   ])("says it can't reach the server when $case", async ({ network }) => {
     renderTile(network);
 
     await advance();
 
     expect(statusText()).toBe(UNREACHABLE_TEXT);
+  });
+
+  it('shows the first 7 characters of the version the server reports', async () => {
+    renderTile(answerFromImage);
+
+    await advance();
+
+    expect(versionText()).toBe(IMAGE_VERSION_TEXT);
+  });
+
+  it('shows the version when the server answers 503', async () => {
+    renderTile(answerDatabaseFailed);
+
+    await advance();
+
+    expect(versionText()).toBe(DEV_VERSION_TEXT);
+  });
+
+  it('shows no version until the server answers', async () => {
+    renderTile(neverAnswer);
+
+    await advance();
+
+    expect(versionText()).toBeNull();
   });
 
   it('reads /api/health again 60 seconds after each answer', async () => {

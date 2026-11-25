@@ -45,6 +45,8 @@ npx playwright show-report   # open the last run's report, from playwright-repor
 
 The test server is the real one in production mode, with a new e2e-data/ folder for each run and a made-up login as its only allowed user, so it never touches data/. It needs port 8181 free. To run one project, add its name: `npm run e2e -- --project=iphone`.
 
+`npx playwright show-report` serves the report on port 9323 until you press Ctrl+C. While an earlier report is still being served there, it stops with "listen EADDRINUSE: address already in use"; `npx playwright show-report --port 9324` serves it on another port.
+
 ## Continuous integration
 
 GitHub Actions runs .github/workflows/ci.yml on every pull request and every push to main. A pull request merges only when all three of its jobs pass:

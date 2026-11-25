@@ -71,12 +71,12 @@ Registering needs no administrator. The task:
 
 - **Runs every 5 minutes**, from now on, with no end date.
 - **Runs only while you're signed in**, because Docker Desktop runs in your session. It isn't elevated: RunLevel stays Limited, the default.
-- **Never runs twice at once.** A run that falls due while one is still going is skipped.
-- **Stops a run that hangs after 15 minutes**, so it can't hold up the runs after it, where Task Scheduler's default limit is 3 days. The limit has to outlast a slow pull of the 100 MB image and the 120 s that a new container gets to report healthy, so never set it below 10 minutes. The stop itself hasn't been tried. A trial showed only what it and the setting above rely on: the task stays Running until the script ends.
+- **Skips a run while the last one is still going**, but only while that one is under 15 minutes old. After that, the task lets go of it, and later runs can start beside it: see the next bullet.
+- **Lets go of a run after 15 minutes, but doesn't stop it.** At the limit, Task Scheduler ends conhost.exe and the task leaves Running, but pwsh.exe and the script go on. So the limit doesn't stop a hung run, and later runs can start beside it. A trial with a 1-minute limit and a stand-in script that wrote a line every 10 s for 5 minutes showed it: at 1 minute the task was Ready and conhost.exe was gone, while pwsh.exe wrote every line to the end, almost 4 minutes later. Until the limit, the task stays Running while the script runs, which the setting above relies on. Task Scheduler's default limit is 3 days. This one has to outlast a slow pull of the 100 MB image and the 120 s that a new container gets to report healthy, so never set it below 10 minutes.
 - **Runs on battery too.** By default, Task Scheduler doesn't start a task on battery and stops one that's running when the power goes. On a laptop that would pause the updates, and could stop one halfway through replacing the container.
 - **Opens no window.** A console program that Task Scheduler starts opens one, and until Phase 6 the wall is this desktop's second screen. `pwsh -WindowStyle Hidden` still flashes a window (PowerShell issue 3028), and with Windows Terminal as the default terminal it's reported not to hide at all. `conhost.exe --headless` runs pwsh with no window. That flag is undocumented: it comes from reports on that issue, and a trial run here showed no window.
 
-conhost hides the script's exit code: the task's last result stays 0, even after a failed run. So update.log is the only place a failed run shows, and a run that can't start the script shows nowhere (see When a run fails).
+conhost hides the script's exit code: the task's last result stays 0, even after a failed run, and reads 267014 only after a run that passed the time limit, until the next run starts. So update.log is the only place a failed run shows, and a run that can't start the script shows nowhere (see When a run fails).
 
 To start a run now, see when it last ran and runs next, or remove the task:
 
@@ -104,7 +104,16 @@ update.log gets a line only for a new container, with its version, or for a fail
 - **Docker Desktop hasn't started yet after you sign in.** The first command fails with something like `failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; ... The system cannot find the file specified.` HomeHub isn't running either until Docker Desktop is. The first run after Docker Desktop is up works, so a line or two like this after a sign-in is normal.
 - **No network.** The pull fails, and the container keeps running the image it has. The next run with a network catches up.
 - **An image that can't start.** The start fails with `container homehub-homehub-1 is unhealthy`, and every later run logs it again. Nothing rolls back by itself, so HomeHub stays down until a good image arrives on main, or until you roll back. The image job's smoke test in CI is what keeps such an image off main.
-- **The script doesn't start at all.** A PowerShell older than 7.4 refuses it over its #Requires line, and a broken copy stops at the parser. Either way PowerShell prints the error and exits with 1 before the script writes anything, so update.log gets no line, and the task's last result is still 0. So when a merge doesn't arrive and the log has no new line, the script isn't starting: run step 5's command by hand to see why.
+- **A run that hangs past 15 minutes.** The task lets go of it, and later runs start beside it, but its pwsh.exe goes on, with any docker.exe it started under it. The hung run writes no line to update.log, and the task's last result reads 267014 (0x41306, SCHED_S_TASK_TERMINATED) only until the next run starts, within 5 minutes. So look for the run itself: a pwsh.exe whose command line names C:\HomeHub\update.ps1 and that started more than 15 minutes ago. These show the last result, every run with its start time, and what one run started:
+
+  ```powershell
+  Get-ScheduledTaskInfo -TaskName 'HomeHub update' | Format-List LastRunTime, LastTaskResult
+  Get-CimInstance Win32_Process -Filter "Name = 'pwsh.exe'" | Where-Object CommandLine -like '*C:\HomeHub\update.ps1*' | Format-Table ProcessId, CreationDate
+  Get-CimInstance Win32_Process -Filter 'ParentProcessId = <id>' | Format-Table ProcessId, Name, CreationDate
+  ```
+
+  End a run that started more than 15 minutes ago, and everything under it, with `taskkill /T /F /PID <id>`, using its ProcessId. A younger run may only be slow, so leave it alone.
+- **The script doesn't start at all.** A PowerShell older than 7.4 refuses it over its #Requires line, and a broken copy stops at the parser. Either way PowerShell prints the error and exits with 1 before the script writes anything, so update.log gets no line, and the task's last result is still 0. So when a merge doesn't arrive, the log has no new line and no run hangs (above), the script isn't starting: run step 5's command by hand to see why.
 
 ## Rolling back
 

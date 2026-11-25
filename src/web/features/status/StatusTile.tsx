@@ -3,13 +3,26 @@ import {
   useServerHealth,
 } from '../../data/use-server-health.ts';
 
-/** The wall's status tile: whether the server and its database answer (OBS-6). */
+// As GitHub shortens a commit, and as the image's sha- tag names it.
+const SHORT_VERSION_LENGTH = 7;
+
+/**
+ * The wall's status tile: whether the server and its database answer, and
+ * the version the server reports once it has answered (OBS-6).
+ */
 export function StatusTile() {
   const health = useServerHealth();
   return (
-    <p role="status" className="text-2xl">
-      {describeHealth(health)}
-    </p>
+    <div>
+      <p role="status" className="text-2xl">
+        {describeHealth(health)}
+      </p>
+      {health.state === 'answered' && (
+        <p className="text-2xl text-text-muted">
+          Version {health.report.version.slice(0, SHORT_VERSION_LENGTH)}
+        </p>
+      )}
+    </div>
   );
 }
 
