@@ -220,13 +220,13 @@ Photos go from a Lightroom export to the wall through one inbox folder and one p
 5. Metadata goes into SQLite, the WebP files go into the web folder, the original moves to originals, and the photo joins the rotation. A file that fails moves to failed, with the reason logged.
 6. The browser drag-and-drop upload saves into the same inbox, so there's only one processing path.
 
-The data volume on the host, which the server finds through DATA_DIR (/data in the container):
+What the server sees at /data, the folder DATA_DIR names in the container. On the desktop, the database and its -wal and -shm files sit in the Docker volume (DATA-9), and the rest in the deploy folder's data folder: backups now, and the photos from Phase 5.
 
 ```text
-data/
-├── homehub.db            # plus homehub.db-wal and homehub.db-shm
-├── backups/              # pre-migration and nightly backups
-└── photos/
+/data/
+├── homehub.db            # plus homehub.db-wal and homehub.db-shm: the Docker volume
+├── backups/              # pre-migration and nightly backups: the deploy folder's data\backups
+└── photos/               # the deploy folder's data\photos, from Phase 5
     ├── inbox/            # Lightroom exports and browser uploads land here
     ├── originals/        # processed originals
     ├── failed/           # files that couldn't be processed
@@ -295,7 +295,7 @@ HomeHub runs as one container on the desktop now and moves to the NAS later, wit
 Deploying:
 
 1. A pull request merges to main.
-2. GitHub Actions builds the image, starts it through compose.yaml as the host runs it, and checks its answers. Only then does it push ghcr.io/<you>/homehub, with two tags: sha- and the commit's first 7 characters, and main, unless main has already moved on to a newer commit. The package is public, so the host pulls without credentials.
+2. GitHub Actions builds the image and starts it through compose.yaml as the host runs it: first with a backups folder it can't write to, which the server must refuse, then with a writable one, whose answers it checks. Only then does it push ghcr.io/<you>/homehub, with two tags: sha- and the commit's first 7 characters, and main, unless main has already moved on to a newer commit. The package is public, so the host pulls without credentials.
 3. Every 5 minutes, the host's scheduled task runs `docker compose pull` and then `docker compose up -d`. Compose restarts the container only when the image changed.
 4. On start, the server applies any pending migrations, backing up the database first, and reports the new commit at /api/health.
 5. Open pages pick up the new build. Each asks for a new service worker every hour and whenever it becomes visible. The wall reloads into it at once; a phone shows a "new version" prompt and keeps the old version running until Reload is tapped. A page whose layout crashed reloads at once too, since it has nothing to keep.

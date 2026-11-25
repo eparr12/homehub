@@ -94,13 +94,24 @@ jobs:
       # which finds this build under the tag it asks for; --pull never makes
       # sure that nothing else gets tested. A build alone proves too little:
       # one with a runtime package in devDependencies passes check and e2e,
-      # then exits as it starts. The backups folder is made writable first,
-      # because one that Docker makes belongs to root, and the server stops.
+      # then exits as it starts. The server must first refuse a backups folder
+      # that it can't write to, such as one that Docker makes for root, and
+      # then start with a writable one.
       - name: Smoke test
         id: smoke
         run: |
-          install -d -m 0777 data/backups
           echo 'ALLOWED_USERS=ci@example.com=ci' > .env
+          # The server has to refuse a backups folder that it can't write to.
+          install -d -m 0555 data/backups
+          if docker compose up --detach --wait --wait-timeout 30 --pull never; then
+            echo 'The server started with a backups folder it cannot write to.'
+            exit 1
+          fi
+          # --count, not --quiet: under pipefail, grep --quiet can close the
+          # pipe while docker compose logs is still writing, and fail the step.
+          docker compose logs | grep --count "EACCES: permission denied, access '/data/backups'"
+          docker compose down
+          chmod 0777 data/backups
           docker compose up --detach --wait --wait-timeout 60 --pull never
           test "$(docker compose exec -T homehub id -un)" = node
           curl --fail --silent --show-error http://127.0.0.1:8080/api/health |
