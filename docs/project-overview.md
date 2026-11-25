@@ -288,7 +288,7 @@ Until the mini PC arrives, the UPERFECT is a second screen on the desktop, runni
 
 HomeHub runs as one container on the desktop now and moves to the NAS later, with the same image and the same compose.yaml.
 
-**Now: the desktop.** Docker Desktop (WSL 2 backend, free for personal use) starts at sign-in, and Tailscale for Windows runs Serve. A deploy folder such as C:\HomeHub, on a local disk and never in OneDrive, holds compose.yaml, .env and data\backups. The live database isn't there: it sits in a Docker volume, on the disk of Docker Desktop's Linux VM (DATA-9). Docker Desktop shares a Windows folder into that VM over a file-sharing layer; Docker's guidance is to keep bind-mounted data off it, and SQLite users report corrupted WAL databases on it. A finished backup is an ordinary file, so the backups can sit in the Windows folder. Resetting Docker Desktop deletes the volume, so data\backups is what survives. The desktop must not sleep, and after a Windows Update restart HomeHub comes back once someone signs in.
+**Now: the desktop.** Docker Desktop (WSL 2 backend, free for personal use) starts at sign-in, and Tailscale for Windows runs Serve. A deploy folder such as C:\HomeHub, on a local disk and never in OneDrive, holds compose.yaml, update.ps1, .env, update.log and data\backups. compose.yaml and update.ps1 are copies that reach it only by hand, so what the container may touch on the desktop never changes with a merge. The live database isn't there: it sits in a Docker volume, on the disk of Docker Desktop's Linux VM (DATA-9). Docker Desktop shares a Windows folder into that VM over a file-sharing layer; Docker's guidance is to keep bind-mounted data off it, and SQLite users report corrupted WAL databases on it. A finished backup is an ordinary file, so the backups can sit in the Windows folder. Resetting Docker Desktop deletes the volume, so data\backups is what survives. The desktop must not sleep, and after a Windows Update restart HomeHub comes back once someone signs in.
 
 **Later: the NAS.** Ubuntu Server 26.04 LTS with Docker Engine and the Compose plugin, Tailscale, a Samba share for the photo inbox, mirrored data drives and a systemd timer in place of the Windows scheduled task.
 
@@ -296,11 +296,11 @@ Deploying:
 
 1. A pull request merges to main.
 2. GitHub Actions builds the image and starts it through compose.yaml as the host runs it: first with a backups folder it can't write to, which the server must refuse, then with a writable one, whose answers it checks. Only then does it push ghcr.io/<you>/homehub, with two tags: sha- and the commit's first 7 characters, and main, unless main has already moved on to a newer commit. The package is public, so the host pulls without credentials.
-3. Every 5 minutes, the host's scheduled task runs `docker compose pull` and then `docker compose up -d`. Compose restarts the container only when the image changed.
+3. Every 5 minutes, a scheduled task runs update.ps1 in the deploy folder: `docker compose pull`, then `docker compose up --detach --wait`, then `docker image prune --force`. Compose replaces the container only when the image or .env changed. The script stops at the first command that fails, and writes a line to update.log only for a new container, with its version, or for a failure. deploy/README.md sets it up.
 4. On start, the server applies any pending migrations, backing up the database first, and reports the new commit at /api/health.
 5. Open pages pick up the new build. Each asks for a new service worker every hour and whenever it becomes visible. The wall reloads into it at once; a phone shows a "new version" prompt and keeps the old version running until Reload is tapped. A page whose layout crashed reloads at once too, since it has nothing to keep.
 
-To roll back, set HOMEHUB_TAG to an older sha- tag in .env and run `docker compose up -d`. Migrations only add tables and columns (DATA-11), so the previous image still runs: it finds a schema newer than its own migrations, logs a warning and starts without migrating. There's no self-hosted CI runner: the repo is public, and a fork's pull request could run code on it.
+To roll back, set HOMEHUB_TAG to an older sha- tag in .env, and the task's next run starts that image. Migrations only add tables and columns (DATA-11), so the previous image still runs: it finds a schema newer than its own migrations, logs a warning and starts without migrating. There's no self-hosted CI runner: the repo is public, and a fork's pull request could run code on it.
 
 Backups:
 

@@ -35,7 +35,12 @@ export default defineConfig({
         test: {
           name: 'node',
           environment: 'node',
-          include: ['src/server/**/*.test.ts', 'src/shared/**/*.test.ts'],
+          // deploy's tests run update.ps1 under pwsh.
+          include: [
+            'src/server/**/*.test.ts',
+            'src/shared/**/*.test.ts',
+            'deploy/**/*.test.ts',
+          ],
         },
       },
       {

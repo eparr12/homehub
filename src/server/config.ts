@@ -4,7 +4,9 @@ import { z } from 'zod';
 // client, because that's what makes its identity headers trustworthy (SEC-2).
 // Only the container sets HOST=0.0.0.0, and Compose publishes 127.0.0.1 alone.
 const DEFAULT_HOST = '127.0.0.1';
-const DEFAULT_PORT = 8080;
+// Not 8080: on the desktop, where development happens too, the container
+// holds it. The image and compose.yaml set PORT=8080 themselves.
+const DEFAULT_PORT = 8081;
 const MAX_TCP_PORT = 65_535;
 // The repo's gitignored data/ folder in development. The container sets
 // DATA_DIR=/data, where Compose mounts the volume.

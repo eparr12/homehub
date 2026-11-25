@@ -3,15 +3,15 @@ HomeHub: our family dashboard for a wall touchscreen and our phones
 
 ## Develop
 
-You need Node.js 26.4 or newer, in the 26 line that .nvmrc names. It ships npm 11.17, and npm before 11.16 ignores package.json's `allowScripts`. Then:
+You need Node.js 26.4 or newer, in the 26 line that .nvmrc names. It ships npm 11.17, and npm before 11.16 ignores package.json's `allowScripts`. You also need PowerShell 7.4 or newer (`pwsh`), because `npm run check` runs the tests of the host's update script. Then:
 
 ```sh
 npm ci           # install exactly what package-lock.json lists
-npm run dev      # the server on 127.0.0.1:8080 and the app on http://localhost:5173
+npm run dev      # the server on 127.0.0.1:8081 and the app on http://localhost:5173
 npm run check    # typecheck, lint, format check and unit tests
 ```
 
-The phone layout is at http://localhost:5173/ and the wall layout at http://localhost:5173/wall. Vite forwards /api and /media to the server. Develop on port 5173: port 8080 serves whatever the last build left in dist/web.
+The phone layout is at http://localhost:5173/ and the wall layout at http://localhost:5173/wall. Vite forwards /api and /media to the server. Develop on port 5173: port 8081 serves whatever the last build left in dist/web. Port 8080 belongs to the container that runs HomeHub on the desktop.
 
 The server keeps its SQLite database in data/homehub.db, and saves a backup in data/backups before each migration. The data/ folder is gitignored; set DATA_DIR to use another folder.
 
@@ -21,7 +21,7 @@ The server keeps its SQLite database in data/homehub.db, and saves a backup in d
 
 ```sh
 npm run build       # the production web build into dist/web
-npm run dev:server  # the server on http://127.0.0.1:8080: /api, and the build
+npm run dev:server  # the server on http://127.0.0.1:8081: /api, and the build
 ```
 
 The server looks for dist/web when it starts, so the build comes first; a server started before it answers /api alone until you restart it. After that, it reads the files for each request, so a new build is served without a restart. Every file goes out with the server's security headers, its Content Security Policy among them, just as in production.
@@ -64,6 +64,10 @@ The next local `npm run e2e` deletes the whole playwright-report/ folder, downlo
 
 Dependabot (.github/dependabot.yml) checks npm packages, GitHub Actions and the Dockerfile's Node base image every Monday and opens pull requests only for releases at least 7 days old: one for each ecosystem's minor and patch updates, one for each major, and one when the base image's tag moves to a new digest. Dependabot alerts report a vulnerable dependency at once, and a security update pull request follows an alert without the 7-day wait.
 
+## Deploy
+
+Every merge to main deploys itself. CI pushes the image to GHCR, and on the desktop a scheduled task runs deploy/update.ps1 every 5 minutes, which pulls the image and starts it. deploy/README.md sets up the host: the deploy folder, its .env, the task, the log, and how to roll back.
+
 ## Configure
 
 The server reads its settings from environment variables. `npm run dev` and `npm run dev:server` load them from a .env file in the repo folder, if there is one; in production, compose.yaml passes in the .env from the host's deploy folder. The repo's .env is gitignored and holds only development values (SEC-1).
@@ -83,6 +87,6 @@ ALLOWED_USERS=alex@example.com=alex
 DEV_USER=alex@example.com
 ```
 
-With it, `npm run dev:server` answers http://127.0.0.1:8080/api/me with `{"shortName":"alex","displayName":"alex"}`.
+With it, `npm run dev:server` answers http://127.0.0.1:8081/api/me with `{"shortName":"alex","displayName":"alex"}`.
 
 In production, the image and compose.yaml both set `NODE_ENV=production`, `HOST=0.0.0.0`, `PORT=8080` and `DATA_DIR=/data`, and compose.yaml's values win over .env, so nothing in it can change them. Compose publishes the port on 127.0.0.1:8080 only (SEC-2), mounts a Docker volume that holds the database at /data, and mounts the deploy folder's data/backups at /data/backups.

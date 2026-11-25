@@ -8,7 +8,7 @@ import { SERVER_PATH_PREFIXES } from './src/shared/server-paths.ts';
 import { WALL_PATH } from './src/web/app/paths.ts';
 
 /** Where `npm run dev:server` listens: config.ts's default HOST and PORT. */
-const DEV_SERVER_ORIGIN = 'http://127.0.0.1:8080';
+const DEV_SERVER_ORIGIN = 'http://127.0.0.1:8081';
 const THEMES_FILE = fileURLToPath(
   new URL('src/web/styles/themes.css', import.meta.url),
 );

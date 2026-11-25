@@ -4,12 +4,12 @@ import { parseConfig } from './config.ts';
 const ALLOWED_USERS = 'alex@example.com=alex';
 
 describe('parseConfig', () => {
-  it('listens on 127.0.0.1:8080, keeps data in "data" and reports version dev when only ALLOWED_USERS is set', () => {
+  it('listens on 127.0.0.1:8081, keeps data in "data" and reports version dev when only ALLOWED_USERS is set', () => {
     expect(parseConfig({ ALLOWED_USERS })).toEqual({
       ok: true,
       value: {
         host: '127.0.0.1',
-        port: 8080,
+        port: 8081,
         dataDir: 'data',
         allowedUsers: new Map([['alex@example.com', 'alex']]),
         devUser: undefined,
