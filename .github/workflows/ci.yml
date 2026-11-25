@@ -117,16 +117,13 @@ jobs:
       # finish in either order, so the main tag moves only while main still
       # names this commit, and never back to an older one.
       - name: Push
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # TEMPORARY, for the trial push: this pull request only, as trial.
+        if: github.event_name == 'pull_request'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
-          docker tag "$IMAGE:main" "$IMAGE:sha-${GITHUB_SHA::7}"
-          docker push "$IMAGE:sha-${GITHUB_SHA::7}"
+          docker tag "$IMAGE:main" "$IMAGE:trial"
+          docker push "$IMAGE:trial"
           main_now="$(git ls-remote origin refs/heads/main | cut -f1)"
-          if [ "$main_now" = "$GITHUB_SHA" ]; then
-            docker push "$IMAGE:main"
-          else
-            echo "main has moved on to $main_now, so its run moves the main tag"
-          fi
+          echo "main names $main_now, and this run built $GITHUB_SHA"
