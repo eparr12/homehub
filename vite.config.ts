@@ -90,7 +90,7 @@ export default defineConfig({
     // One app chunk on purpose: HomeHub loads once and stays open, the wall
     // for weeks, so splitting the code would add requests and save nothing.
     // The PWA plugin loads workbox-window as a second chunk of 6 kB. Motion
-    // and Zod take the app past Vite's 500 kB default (539 kB, 172 kB
+    // and Zod take the app past Vite's 500 kB default (557 kB, 176 kB
     // gzipped); this limit still warns about an unexpected jump.
     chunkSizeWarningLimit: 600,
   },

@@ -1,0 +1,47 @@
+# How the host runs HomeHub, from a deploy folder that holds a copy of this
+# file, .env and data/backups (build-plan step 1.8). Every docker compose
+# command beside a copy acts on the one project homehub.
+name: homehub
+
+services:
+  homehub:
+    image: ghcr.io/eparr12/homehub:${HOMEHUB_TAG:-main}
+    restart: unless-stopped
+    # Loopback only: Tailscale Serve on this machine is the one client, which
+    # is what makes its identity headers trustworthy (SEC-2).
+    ports:
+      - '127.0.0.1:8080:8080'
+    env_file: .env
+    # The image sets these too. Here they win over .env, so nothing in it can
+    # change them.
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 8080
+      DATA_DIR: /data
+    volumes:
+      # The live database, in a Docker volume on the Linux side: under Docker
+      # Desktop a folder shared from Windows can't be trusted with SQLite's
+      # locks and write-ahead log (DATA-9).
+      - database:/data
+      # Finished backups, in the deploy folder, where they outlast the volume.
+      - ./data/backups:/data/backups
+    # Writable only at /data and /tmp (SEC-9).
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # Docker's default, named: shutdown finishes within it (SRV-8).
+    stop_grace_period: 10s
+    # Docker's default json-file driver lets the log grow without limit.
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: '5'
+
+volumes:
+  database:

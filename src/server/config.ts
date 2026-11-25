@@ -9,6 +9,9 @@ const MAX_TCP_PORT = 65_535;
 // The repo's gitignored data/ folder in development. The container sets
 // DATA_DIR=/data, where Compose mounts the volume.
 const DEFAULT_DATA_DIR = 'data';
+// The image sets GIT_SHA to the commit it was built from (OBS-6); anywhere
+// else, the server reports this.
+const DEFAULT_VERSION = 'dev';
 const DEVELOPMENT = 'development';
 // The default, so DEV_USER is refused unless NODE_ENV says development (SEC-3).
 const PRODUCTION = 'production';
@@ -39,6 +42,7 @@ const environmentSchema = z.object({
   HOST: z.ipv4().default(DEFAULT_HOST),
   PORT: z.coerce.number().int().min(1).max(MAX_TCP_PORT).default(DEFAULT_PORT),
   DATA_DIR: z.string().min(1).default(DEFAULT_DATA_DIR),
+  GIT_SHA: z.string().min(1).default(DEFAULT_VERSION),
   NODE_ENV: z.enum([DEVELOPMENT, PRODUCTION]).default(PRODUCTION),
   ALLOWED_USERS: z
     .string({ error: MISSING_ALLOWED_USERS })
@@ -73,6 +77,7 @@ const configSchema = environmentSchema.transform((env, ctx) => {
     dataDir: env.DATA_DIR,
     allowedUsers: env.ALLOWED_USERS,
     devUser: devUser.value,
+    version: env.GIT_SHA,
   };
 });
 

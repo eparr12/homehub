@@ -123,7 +123,7 @@ The same server serves the web app: the production build that Vite writes to dis
 | Photos | sharp (libvips) and exiftool-vendored (ExifTool) | Fast WebP versions, and ExifTool reads Canon EXIF data and Lightroom keywords reliably |
 | Dates and themes | Temporal (built into Node 26) in America/New_York | Correct local holiday dates without a date library |
 | Access and identity | Tailscale Personal (free) and Tailscale Serve | HTTPS on our own devices only: no open ports, no passwords and no sign-in code |
-| Hosting | One Docker image: Docker Desktop on the desktop now, Docker Engine on the NAS later | The same image and data folder on both hosts |
+| Hosting | One Docker image: Docker Desktop on the desktop now, Docker Engine on the NAS later | The same image and compose.yaml on both hosts |
 | CI/CD | GitHub Actions on a public repo, GitHub Container Registry, and a scheduled pull on the host | Free, and the host needs no inbound access and no CI runner |
 | Testing | Vitest (with Testing Library and fake-indexeddb) and Playwright (with axe) | Fast unit tests, plus real-browser tests of offline sync, themes and accessibility |
 | Logging | pino JSON logs, read with Docker | Structured logs with nothing extra to run |
@@ -220,13 +220,13 @@ Photos go from a Lightroom export to the wall through one inbox folder and one p
 5. Metadata goes into SQLite, the WebP files go into the web folder, the original moves to originals, and the photo joins the rotation. A file that fails moves to failed, with the reason logged.
 6. The browser drag-and-drop upload saves into the same inbox, so there's only one processing path.
 
-The data volume on the host, which the server finds through DATA_DIR (/data in the container):
+What the server sees at /data, the folder DATA_DIR names in the container. On the desktop, the database and its -wal and -shm files sit in the Docker volume (DATA-9), and the rest in the deploy folder's data folder: backups now, and the photos from Phase 5.
 
 ```text
-data/
-├── homehub.db            # plus homehub.db-wal and homehub.db-shm
-├── backups/              # pre-migration and nightly backups
-└── photos/
+/data/
+├── homehub.db            # plus homehub.db-wal and homehub.db-shm: the Docker volume
+├── backups/              # pre-migration and nightly backups: the deploy folder's data\backups
+└── photos/               # the deploy folder's data\photos, from Phase 5
     ├── inbox/            # Lightroom exports and browser uploads land here
     ├── originals/        # processed originals
     ├── failed/           # files that couldn't be processed
@@ -286,16 +286,16 @@ Until the mini PC arrives, the UPERFECT is a second screen on the desktop, runni
 
 ## Hosting, deployment and backups
 
-HomeHub runs as one container on the desktop now and moves to the NAS later, with the same image and the same data folder.
+HomeHub runs as one container on the desktop now and moves to the NAS later, with the same image and the same compose.yaml.
 
-**Now: the desktop.** Docker Desktop (WSL 2 backend, free for personal use) starts at sign-in, and Tailscale for Windows runs Serve. A deploy folder such as C:\HomeHub holds compose.yaml, .env and the data folder, on a local disk and never in OneDrive (DATA-9). The desktop must not sleep, and after a Windows Update restart HomeHub comes back once someone signs in.
+**Now: the desktop.** Docker Desktop (WSL 2 backend, free for personal use) starts at sign-in, and Tailscale for Windows runs Serve. A deploy folder such as C:\HomeHub, on a local disk and never in OneDrive, holds compose.yaml, .env and data\backups. The live database isn't there: it sits in a Docker volume, on the disk of Docker Desktop's Linux VM (DATA-9). Docker Desktop shares a Windows folder into that VM over a file-sharing layer; Docker's guidance is to keep bind-mounted data off it, and SQLite users report corrupted WAL databases on it. A finished backup is an ordinary file, so the backups can sit in the Windows folder. Resetting Docker Desktop deletes the volume, so data\backups is what survives. The desktop must not sleep, and after a Windows Update restart HomeHub comes back once someone signs in.
 
 **Later: the NAS.** Ubuntu Server 26.04 LTS with Docker Engine and the Compose plugin, Tailscale, a Samba share for the photo inbox, mirrored data drives and a systemd timer in place of the Windows scheduled task.
 
 Deploying:
 
 1. A pull request merges to main.
-2. GitHub Actions builds the image and pushes ghcr.io/<you>/homehub with two tags: main and sha-<commit>. The package is public, so the host pulls without credentials.
+2. GitHub Actions builds the image and starts it through compose.yaml as the host runs it: first with a backups folder it can't write to, which the server must refuse, then with a writable one, whose answers it checks. Only then does it push ghcr.io/<you>/homehub, with two tags: sha- and the commit's first 7 characters, and main, unless main has already moved on to a newer commit. The package is public, so the host pulls without credentials.
 3. Every 5 minutes, the host's scheduled task runs `docker compose pull` and then `docker compose up -d`. Compose restarts the container only when the image changed.
 4. On start, the server applies any pending migrations, backing up the database first, and reports the new commit at /api/health.
 5. Open pages pick up the new build. Each asks for a new service worker every hour and whenever it becomes visible. The wall reloads into it at once; a phone shows a "new version" prompt and keeps the old version running until Reload is tapped. A page whose layout crashed reloads at once too, since it has nothing to keep.

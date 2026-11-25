@@ -47,10 +47,11 @@ The test server is the real one in production mode, with a new e2e-data/ folder 
 
 ## Continuous integration
 
-GitHub Actions runs .github/workflows/ci.yml on every pull request and every push to main. A pull request merges only when both of its jobs pass:
+GitHub Actions runs .github/workflows/ci.yml on every pull request and every push to main. A pull request merges only when all three of its jobs pass:
 
 - **check**: `npm ci`, `npm run check`, which prints a coverage table when CI is set, and `npm audit --audit-level=high`.
 - **e2e**: `npm ci`, Chromium and WebKit with the system packages they need, and `npm run e2e`.
+- **image**: `docker build --check`, the image build with the commit as GIT_SHA, and a smoke test that starts the image through compose.yaml, as the host runs it. The test first checks that the server refuses to start with a backups folder it can't write to. Then, with a writable one, it checks that the server runs as node, that /api/health reports ok and the commit, that /api/me answers a test login and / the app, and that it stops with exit code 0. On a push to main, the job then pushes the image to GHCR as `sha-` and the commit's first 7 characters, and as `main` if main still names that commit.
 
 When e2e fails, the run's Summary page lists the Playwright report under Artifacts as playwright-report, kept for 14 days. Anyone signed in to GitHub can download it, so tests use only made-up data. To open it, download it into a folder named for the run, because gh won't overwrite an existing file, such as a local report's index.html:
 
@@ -61,17 +62,18 @@ npx playwright show-report playwright-report/<run-id>
 
 The next local `npm run e2e` deletes the whole playwright-report/ folder, downloads included, so they don't pile up.
 
-Dependabot (.github/dependabot.yml) checks npm packages and GitHub Actions every Monday and opens pull requests only for releases at least 7 days old: one for each ecosystem's minor and patch updates, and one for each major. Dependabot alerts report a vulnerable dependency at once, and a security update pull request follows an alert without the 7-day wait.
+Dependabot (.github/dependabot.yml) checks npm packages, GitHub Actions and the Dockerfile's Node base image every Monday and opens pull requests only for releases at least 7 days old: one for each ecosystem's minor and patch updates, one for each major, and one when the base image's tag moves to a new digest. Dependabot alerts report a vulnerable dependency at once, and a security update pull request follows an alert without the 7-day wait.
 
 ## Configure
 
-The server reads its settings from environment variables. `npm run dev` and `npm run dev:server` load them from a .env file in the repo folder, if there is one; in production, Compose will pass them in from the host's .env (build-plan step 1.8). The repo's .env is gitignored and holds only development values (SEC-1).
+The server reads its settings from environment variables. `npm run dev` and `npm run dev:server` load them from a .env file in the repo folder, if there is one; in production, compose.yaml passes in the .env from the host's deploy folder. The repo's .env is gitignored and holds only development values (SEC-1).
 
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `ALLOWED_USERS` | None; the server won't start without it | The Tailscale logins that may use HomeHub, each with a short name that logs and the app show instead of the email address. Write comma-separated `login=shortname` pairs, such as `alex@example.com=alex,sam@example.com=sam`. Logins match in any letter case, and a short name is lowercase letters, digits and hyphens. |
 | `NODE_ENV` | `production` | `development` or `production`. Only development allows `DEV_USER`. |
 | `DEV_USER` | None | One of the logins in `ALLOWED_USERS`. In development, where no Tailscale Serve adds identity headers, a request without the Tailscale-User-Login header counts as this user. |
+| `GIT_SHA` | `dev` | The version that /api/health reports. The image sets it to the commit it was built from. |
 
 A .env file for development:
 
@@ -82,3 +84,5 @@ DEV_USER=alex@example.com
 ```
 
 With it, `npm run dev:server` answers http://127.0.0.1:8080/api/me with `{"shortName":"alex","displayName":"alex"}`.
+
+In production, the image and compose.yaml both set `NODE_ENV=production`, `HOST=0.0.0.0`, `PORT=8080` and `DATA_DIR=/data`, and compose.yaml's values win over .env, so nothing in it can change them. Compose publishes the port on 127.0.0.1:8080 only (SEC-2), mounts a Docker volume that holds the database at /data, and mounts the deploy folder's data/backups at /data/backups.

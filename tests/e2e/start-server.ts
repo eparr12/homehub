@@ -28,10 +28,12 @@ process.env.DATA_DIR = DATA_DIR;
 process.env.PORT = String(TEST_SERVER_PORT);
 process.env.ALLOWED_USERS = `${TEST_LOGIN}=${TEST_SHORT_NAME}`;
 // Whatever the shell holds, no request gets in without the login header
-// (SEC-3), and the server keeps its loopback default (SEC-2). With these two
-// gone, the launcher decides every variable that config.ts reads.
+// (SEC-3), the server keeps its loopback default (SEC-2), and it reports
+// version dev. With these three gone, the launcher decides every variable
+// that config.ts reads.
 delete process.env.DEV_USER;
 delete process.env.HOST;
+delete process.env.GIT_SHA;
 
 // Only now, because main.ts reads process.env as it loads.
 await import('../../src/server/main.ts');

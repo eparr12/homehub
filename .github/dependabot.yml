@@ -1,8 +1,8 @@
 # Weekly version updates (SEC-10). Each ecosystem waits 7 days after a release
-# instead of Dependabot's default 3; security updates never wait. One group
-# holds every minor and patch update, so a major always comes alone, and
-# packages that must match, such as vitest and @vitest/coverage-v8, move in
-# one pull request.
+# instead of Dependabot's default 3; security updates never wait. In npm and
+# GitHub Actions, one group holds every minor and patch update, so a major
+# always comes alone, and packages that must match, such as vitest and
+# @vitest/coverage-v8, move in one pull request.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -42,4 +42,21 @@ updates:
     # Titles read ci(deps): ... (GIT-3).
     commit-message:
       prefix: ci
+      include: scope
+
+  # The Dockerfile's base image, pinned by digest, so a new digest for its tag
+  # comes as a pull request too.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    ignore:
+      # Its major follows the Node line in .nvmrc, which moves by hand.
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
+    # Titles read build(deps): ... (GIT-3).
+    commit-message:
+      prefix: build
       include: scope

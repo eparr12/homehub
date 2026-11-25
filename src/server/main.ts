@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from 'node:fs';
+import { accessSync, constants, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serve } from '@hono/node-server';
@@ -32,7 +32,7 @@ if (!config.ok) {
   process.exit(1);
 }
 
-const { dataDir, allowedUsers, devUser } = config.value;
+const { dataDir, allowedUsers, devUser, version } = config.value;
 if (devUser !== undefined) {
   // The one setting that lets a request in without a Tailscale login. Logged
   // by its short name, because the login is an email address (SEC-7).
@@ -44,6 +44,10 @@ if (devUser !== undefined) {
 const backupsDir = join(dataDir, BACKUPS_FOLDER);
 // recursive creates DATA_DIR too, since backups/ sits inside it.
 mkdirSync(backupsDir, { recursive: true });
+// On Docker Engine, a host folder that Docker creates for the backups mount
+// belongs to root. The server would start and report healthy there, and its
+// first backup would fail, so it stops now, through the handler above.
+accessSync(backupsDir, constants.W_OK);
 const db = openDatabase(join(dataDir, DATABASE_FILE));
 // Before serving, so no request sees a half-migrated schema. A failure
 // rejects to the uncaughtException handler above, which logs it and exits.
@@ -65,7 +69,7 @@ if (webDir === undefined) {
 
 const server = serve(
   {
-    fetch: createApp({ db, log, allowedUsers, devUser, webDir }).fetch,
+    fetch: createApp({ db, log, allowedUsers, devUser, webDir, version }).fetch,
     hostname: config.value.host,
     port: config.value.port,
   },

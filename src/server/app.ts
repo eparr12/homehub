@@ -16,10 +16,6 @@ import { noWebFiles, webFiles } from './middleware/web-files.ts';
 
 const HTTP_OK = 200;
 const HTTP_SERVICE_UNAVAILABLE = 503;
-const HEALTHY: HealthResponse = { status: 'ok', database: 'ok' };
-// A status report, not Problem Details: Docker's health check and the wall's
-// status tile read it, and it never carries the error or a path (SRV-6).
-const UNHEALTHY: HealthResponse = { status: 'error', database: 'error' };
 
 /**
  * The cap on an /api request body (SEC-5). Every body is small JSON until
@@ -36,6 +32,8 @@ export interface AppDependencies {
   readonly devUser?: string | undefined;
   /** The production web build to serve, or none to answer /api alone. */
   readonly webDir?: string | undefined;
+  /** What GET /api/health reports as the version: the image's commit, or dev. */
+  readonly version: string;
 }
 
 /** Builds the HomeHub Hono app; main.ts serves it and tests call app.request(). */
@@ -45,7 +43,16 @@ export function createApp({
   allowedUsers,
   devUser,
   webDir,
+  version,
 }: AppDependencies) {
+  const healthy: HealthResponse = { status: 'ok', database: 'ok', version };
+  // A status report, not Problem Details: Docker's health check and the wall's
+  // status tile read it, and it never carries the error or a path (SRV-6).
+  const unhealthy: HealthResponse = {
+    status: 'error',
+    database: 'error',
+    version,
+  };
   // Hono runs handlers in the order they're added, so the order is the
   // security boundary: a route added above identity would skip it.
   return (
@@ -77,9 +84,9 @@ export function createApp({
       // OBS-5).
       .get(HEALTH_PATH, (c) => {
         const check = checkDatabase(db);
-        if (check.ok) return c.json(HEALTHY, HTTP_OK);
+        if (check.ok) return c.json(healthy, HTTP_OK);
         c.get('log').error({ err: check.error }, 'database check failed');
-        return c.json(UNHEALTHY, HTTP_SERVICE_UNAVAILABLE);
+        return c.json(unhealthy, HTTP_SERVICE_UNAVAILABLE);
       })
       // Every route below needs an allowed Tailscale identity (SEC-3).
       .use('/api/*', identity({ allowedUsers, devUser }))
