@@ -1,11 +1,14 @@
+import { setTimeout as delay } from 'node:timers/promises';
 import { test as base, type BrowserContext, expect } from '@playwright/test';
 
 /**
  * Declares a page problem that the current test causes on purpose: the test
  * passes with problems that match the pattern, and fails if none does. Call
- * it before the problem can happen. Problems read "console error at <url>:
- * <text>", "uncaught error: <message>" or "policy violation: <directive>
- * blocked <what>".
+ * it before the problem can happen. A browser reports a problem on its own
+ * schedule, which can be after the test's last line, so the guard waits up
+ * to expectedProblemWait while an expected problem is missing, then compares.
+ * Problems read "console error at <url>: <text>", "uncaught error: <message>"
+ * or "policy violation: <directive> blocked <what>".
  */
 export type ExpectProblem = (pattern: RegExp) => void;
 
@@ -18,15 +21,24 @@ declare global {
 
 const REPORT_VIOLATION = 'reportPolicyViolation' satisfies keyof Window;
 
+// The same limit as Playwright's assertions.
+const EXPECTED_PROBLEM_WAIT_MS = 5_000;
+const EXPECTED_PROBLEM_CHECK_MS = 25;
+
 /**
  * Playwright's test with a guard that fails any test whose pages log a
  * console error, throw an uncaught error or break the Content Security
  * Policy (SEC-8), unless the test expected that problem. Warnings pass:
  * AppUpdates warns about a failed update check, a case it handles.
  */
-export const test = base.extend<{ expectProblem: ExpectProblem }>({
+export const test = base.extend<{
+  expectProblem: ExpectProblem;
+  expectedProblemWait: number;
+}>({
+  // An option, so that a test of the guard can cut the wait short.
+  expectedProblemWait: [EXPECTED_PROBLEM_WAIT_MS, { option: true }],
   expectProblem: [
-    async ({ context }, use) => {
+    async ({ context, expectedProblemWait }, use) => {
       const problems = await recordProblems(context);
       const expected: RegExp[] = [];
 
@@ -34,6 +46,7 @@ export const test = base.extend<{ expectProblem: ExpectProblem }>({
         expected.push(pattern);
       });
 
+      await waitForExpected(problems, expected, expectedProblemWait);
       expect(compareProblems(problems, expected)).toEqual({
         unexpected: [],
         neverHappened: [],
@@ -71,6 +84,22 @@ async function recordProblems(
   return problems;
 }
 
+/**
+ * Waits while an expected problem is missing, for at most waitMs, and not at
+ * all once every pattern matches a problem. The list grows as problems
+ * arrive.
+ */
+async function waitForExpected(
+  problems: readonly string[],
+  expected: readonly RegExp[],
+  waitMs: number,
+): Promise<void> {
+  for (let waited = 0; waited < waitMs; waited += EXPECTED_PROBLEM_CHECK_MS) {
+    if (neverHappened(problems, expected).length === 0) return;
+    await delay(EXPECTED_PROBLEM_CHECK_MS);
+  }
+}
+
 /** The problems that no pattern expected, and the patterns that matched none. */
 function compareProblems(
   problems: readonly string[],
@@ -80,10 +109,18 @@ function compareProblems(
     unexpected: problems.filter(
       (problem) => !expected.some((pattern) => pattern.test(problem)),
     ),
-    neverHappened: expected
-      .filter((pattern) => !problems.some((problem) => pattern.test(problem)))
-      .map(String),
+    neverHappened: neverHappened(problems, expected),
   };
+}
+
+/** The patterns that match no problem, written as text. */
+function neverHappened(
+  problems: readonly string[],
+  expected: readonly RegExp[],
+): string[] {
+  return expected
+    .filter((pattern) => !problems.some((problem) => pattern.test(problem)))
+    .map(String);
 }
 
 /**
