@@ -119,6 +119,8 @@ jobs:
           curl --fail --silent --show-error --header 'Tailscale-User-Login: ci@example.com' \
             http://127.0.0.1:8080/api/me | jq --exit-status '.shortName == "ci"'
           curl --fail --silent --show-error http://127.0.0.1:8080/ | grep --quiet '<div id="root">'
+          # The real server reads the Host from the header, unlike app.request() (SEC-3).
+          test "$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --header 'Host: attacker.example' http://127.0.0.1:8080/api/health)" = 421
           docker compose stop
           test "$(docker inspect --format '{{.State.ExitCode}}' "$(docker compose ps --all --quiet)")" = 0
       # Only the smoke test leaves a container to read.

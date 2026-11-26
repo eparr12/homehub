@@ -130,6 +130,7 @@ describe('security headers (SEC-8)', () => {
   it.each([
     { case: 'the health check', path: '/api/health' },
     { case: 'a refused request', path: '/api/me' },
+    { case: "another site's name", path: `${OTHER_ORIGIN}/api/me` },
     { case: 'an unknown path', path: '/no-such-page' },
   ])('sends the security headers with $case', async ({ path }) => {
     const app = await createTestApp();

@@ -143,7 +143,7 @@ HomeHub never listens on the internet. Every device joins one Tailscale tailnet,
 
 - **Publishing:** the host runs Tailscale and publishes the app with Tailscale Serve, which forwards `https://homehub.<tailnet>.ts.net` to `http://127.0.0.1:8080`. Serve gets a real HTTPS certificate, so phones can install the PWA, and with `--bg` the setting survives reboots.
 - **A stable address:** rename the desktop "homehub" in the Tailscale admin console now. In Phase 7 the desktop takes another name and the NAS takes "homehub", so the address, the installed apps and their offline data never change. Machine names appear in public Certificate Transparency logs when the certificate is issued, so keep them plain.
-- **Identity without sign-in:** for each request from a user's device, Serve adds Tailscale-User-Login, Tailscale-User-Name and Tailscale-User-Profile-Pic headers, with any non-ASCII value RFC 2047-encoded. The server accepts only logins on its ALLOWED_USERS list, which gives each login a short name, such as alex, that logs and the app show instead of the email address (SEC-7). It listens only on 127.0.0.1, so nothing reaches it without passing through Serve. In development, where there's no Serve, DEV_USER stands in for the missing header. There are no passwords, sign-in screens or tokens, so an expired session can never strand the offline outbox.
+- **Identity without sign-in:** for each request from a user's device, Serve adds Tailscale-User-Login, Tailscale-User-Name and Tailscale-User-Profile-Pic headers, with any non-ASCII value RFC 2047-encoded. The server accepts only logins on its ALLOWED_USERS list, which gives each login a short name, such as alex, that logs and the app show instead of the email address (SEC-7). It listens only on 127.0.0.1, so nothing from another machine reaches it without passing through Serve. Programs on the host, a browser among them, reach it directly and can send any header: a web page can point its own name at 127.0.0.1 (DNS rebinding), and its requests to that name are then same-origin, forged login and all. So the server first refuses, with a 421, any request whose Host isn't a loopback name or a name under ts.net (SEC-3). The browser writes the Host from the page's own address, and only Tailscale answers DNS for names under ts.net. In development, where there's no Serve, DEV_USER stands in for the missing header. There are no passwords, sign-in screens or tokens, so an expired session can never strand the offline outbox.
 - **The wall:** the wall's computer signs in to Tailscale as one of us, so the app also records a device name, such as "wall", to show where a change came from.
 - **Phones stay connected:** Android uses always-on VPN, with "Block connections without VPN" left off. iPhone uses VPN On Demand, set to Always for both Wi-Fi and cellular.
 - **Key expiry:** turned off for the server and the wall, so they never drop off the tailnet, and left on for phones.
@@ -335,7 +335,7 @@ homehub/
 │   │   ├── app.ts             # the Hono app; exports AppType
 │   │   ├── config.ts
 │   │   ├── db/                # connection, migrator, migrations/*.sql, backups
-│   │   ├── middleware/        # identity, errors, request IDs, logging, web files
+│   │   ├── middleware/        # Host check, identity, errors, request IDs, logging, web files
 │   │   └── features/          # grocery, shopping, photos, themes, status
 │   └── web/                   # React PWA (Vite root, its own tsconfig.json)
 │       ├── app/               # router, wall and phone layouts, error boundaries, app updates
@@ -358,7 +358,7 @@ Tests target the riskiest parts first: sync correctness, time logic and the offl
 | Level | Tools | Key cases |
 | --- | --- | --- |
 | Shared | Vitest | Each intent's normal case and edge cases; the reducer gives the same answer on client and server |
-| Server | Vitest, real SQLite in memory, `app.request()` | Replayed mutations apply once; every changed row gets the new version; pulls return tombstones; identity and same-origin rules; theme dates in America/New_York |
+| Server | Vitest, real SQLite in memory, `app.request()` | Replayed mutations apply once; every changed row gets the new version; pulls return tombstones; the Host check, identity and same-origin rules; theme dates in America/New_York |
 | Client | Vitest, fake-indexeddb, Testing Library | A change and its outbox entry save together; rebase after a pull; rejected mutations leave the outbox; loading, empty, offline and error states |
 | End to end | Playwright (wall in Chromium, iPhone in WebKit, Android in Chromium), axe | Check items off offline, reconnect and see it on the wall; add on the wall while the server is down; each theme renders and passes axe; the app installs and loads offline |
 

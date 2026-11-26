@@ -11,6 +11,7 @@ import type { AllowedUsers } from './config.ts';
 import { checkDatabase } from './db/connection.ts';
 import { handleError, handleNotFound } from './middleware/errors.ts';
 import { identity } from './middleware/identity.ts';
+import { ownHost } from './middleware/own-host.ts';
 import { type RequestEnv, requestLog } from './middleware/request-log.ts';
 import { noWebFiles, webFiles } from './middleware/web-files.ts';
 
@@ -54,7 +55,7 @@ export function createApp({
     version,
   };
   // Hono runs handlers in the order they're added, so the order is the
-  // security boundary: a route added above identity would skip it.
+  // security boundary: a route added above ownHost or identity would skip it.
   return (
     new Hono<RequestEnv>()
       .onError(handleError)
@@ -73,6 +74,10 @@ export function createApp({
           },
         }),
       )
+      // Before any route, file or identity, so another site's name gets
+      // nothing, and below the middleware above, so the refusal still gets
+      // security headers and a request ID (SEC-3, SEC-8, OBS-5).
+      .use(ownHost())
       // Checks form and text bodies, which a page on another origin can send
       // without a CORS preflight; JSON needs one, and nothing answers it
       // (SEC-4). Behind Serve the request URL starts with http://, so the
@@ -80,8 +85,8 @@ export function createApp({
       // pass on Sec-Fetch-Site, which current browsers send.
       .use(csrf())
       // Open, for Docker's health check (SRV-6), but below the middleware
-      // above, so it still gets security headers and a request ID (SEC-8,
-      // OBS-5).
+      // above, so it still gets the Host check, security headers and a
+      // request ID (SEC-3, SEC-8, OBS-5).
       .get(HEALTH_PATH, (c) => {
         const check = checkDatabase(db);
         if (check.ok) return c.json(healthy, HTTP_OK);
