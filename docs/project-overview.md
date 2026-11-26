@@ -192,7 +192,7 @@ Example outbox entry. The mutationId doubles as the idempotency key, so a retrie
 - POST /api/grocery/sync/push applies a batch of mutations in order, in one transaction, and returns a result for each: applied, duplicate or rejected.
 - GET /api/grocery/sync/pull?since={version} returns every row changed after the client's cursor, including deleted rows (tombstones), plus the new cursor and the current shopping session.
 - GET /api/events is a Server-Sent Events stream. After a commit that changed something, every connected client gets a `changed` event with no row data; data always travels through the pull endpoint.
-- Tables: grocery_items, catalog_items and stores (both Phase 4), shopping_sessions, processed_mutations (each mutation ID with its result) and sync_state.
+- Tables: grocery_items, processed_mutations (each mutation ID with its result) and sync_state, and from Phase 4 catalog_items, stores and shopping_sessions.
 
 **Versioning.** Each push runs in one SQLite transaction that bumps a single counter row and stamps every changed row with the new version:
 
