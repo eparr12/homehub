@@ -50,7 +50,7 @@ One strict TypeScript codebase runs in three places: Node 26 on the server, the 
 - **TS-6** No floating promises: every promise is awaited, returned, or explicitly voided with a comment. Never pass an async function where a synchronous callback is expected.
 - **TS-7** Expected outcomes, such as not found, invalid input or a rejected mutation, are returned as discriminated unions (`{ ok: true, value }` or `{ ok: false, error }`), not thrown. Throw only for the unexpected, and only Error objects.
 - **TS-8** Logic never reads the clock directly (`Date.now()`, `new Date()`, `Temporal.Now`). Server code takes a `clock` from main.ts; web code calls one `now()` helper that tests can fake. Instants are UTC; local dates use HOME_TZ.
-- **TS-9** IDs are UUIDv7 from the uuid package's `v7()`, on clients and the server; `crypto.randomUUID()` only makes v4.
+- **TS-9** IDs are UUIDv7 from the uuid package's `v7()`, on clients and the server; `crypto.randomUUID()` only makes v4. Request IDs are the one exception: Hono's requestId middleware makes a v4 one, or keeps a valid one the client sent, because a request ID only ties a response to its log lines.
 - **TS-10** Use named exports only. Default exports are allowed only where a tool requires one, such as vite.config.ts or playwright.config.ts.
 - **TS-11** Modules get their dependencies (database, clock, logger, config, API client) as parameters from a composition root, never by importing a mutable singleton, so tests can pass fakes.
 - **TS-12 (SHOULD)** Prefer functions and plain objects over classes, `const` over `let`, and `readonly` for shared data; never mutate a function's arguments.
@@ -248,7 +248,7 @@ tsconfig.base.json:
 ```
 
 - TypeScript 6 defaults `types` to an empty list, so each config names its own: `["node"]` at the root and in tests/e2e, and `["vite/client", "node", "vite-plugin-pwa/react"]` in src/web, where Node types are needed only because the client imports the server's `AppType`.
-- ESLint (flat config) uses typescript-eslint's strict-type-checked and stylistic-type-checked presets, eslint-plugin-react-hooks, eslint-plugin-jsx-a11y and ESLint's core `no-restricted-imports` for the ARCH boundaries (with `allowTypeImports`, and `allowImportNames` so that `import type { AppType }` is src/web's one import from src/server). Prettier owns formatting through eslint-config-prettier.
+- ESLint (flat config) uses typescript-eslint's strict-type-checked and stylistic-type-checked presets, eslint-plugin-react-hooks, eslint-plugin-jsx-a11y and ESLint's core `no-restricted-imports` for the ARCH boundaries (with `allowTypeImports`, and `allowImportNames` so that `import type { AppType }` is src/web's one import from src/server), plus `no-restricted-syntax` for a dynamic `import()`, which that rule never sees. Prettier owns formatting through eslint-config-prettier.
 - Vitest runs two projects: node (src/shared, src/server, and deploy's tests, which run update.ps1 under pwsh with a stand-in for docker) and web (src/web, jsdom, fake-indexeddb, Testing Library).
 - Coverage uses @vitest/coverage-v8 and is on only when CI is set, so `npm run check` stays one command; `npm run test -- --coverage` prints it locally. It counts every file under src except src/server/test-support.ts, so a module no test imports shows at 0%, and prints a text table with no thresholds, so it never fails a run (TEST-3).
 - Playwright runs three projects: wall (Chromium at 1920 by 1080), iPhone (WebKit) and Android (Chromium, Pixel viewport), with @axe-core/playwright for accessibility.
