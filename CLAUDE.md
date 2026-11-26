@@ -8,6 +8,7 @@ Family dashboard: one React PWA with a wall layout (1920x1080 touchscreen) and a
 - docs/build-plan.md: phases and steps; my prompt names the step.
 - docs/coding-standards.md: the rules, imported at the end of this file. Cite rule IDs in plans, commits and PRs.
 - docs/adr/: decisions already made. Don't reverse one without proposing a new ADR.
+- .claude/rules/sync.md: the SYNC rules and what the sync code has taught us. It loads by itself when you read a file under src/shared/grocery, src/server/features/grocery or src/web/data, and a sync lesson goes there, not into the gotchas.
 
 ## Commands
 
