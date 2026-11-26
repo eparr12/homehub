@@ -376,7 +376,7 @@ Claude Code writes the code, tests and config, and takes each change from branch
 
 ## Decision records
 
-Write these ADRs first, each with the alternatives considered:
+ADR-0001 to ADR-0006 are written, in docs/adr, and ADR-0007 and ADR-0008 are still to come. Each one records the alternatives considered:
 
 1. ADR-0001: Record architecture decisions.
 2. ADR-0002: One TypeScript stack on Node 26, replacing .NET, Aspire, PostgreSQL and Azure.
@@ -393,15 +393,15 @@ The first goal is a walking skeleton on both phones and the wall by the end of T
 
 ### Phase 0: Accounts, tools and Claude Code (this week)
 
-- [ ] GitHub and Tailscale accounts, desktop tools, Claude Code in VS Code
-- [ ] Tailscale on the desktop and both phones, with the desktop named homehub
+- [x] GitHub and Tailscale accounts, desktop tools, Claude Code in VS Code
+- [x] Tailscale on the desktop and both phones, with the desktop named homehub
 
 ### Phase 1: Walking skeleton (Thanksgiving weekend)
 
-- [ ] Repo, scaffold, database and migrations, identity and security middleware
-- [ ] App shell and PWA, test harnesses, CI
-- [ ] Docker image, pull-based deploy on the desktop, Tailscale Serve
-- [ ] Installed on both phones and the UPERFECT
+- [x] Repo, scaffold, database and migrations, identity and security middleware
+- [x] App shell and PWA, test harnesses, CI
+- [x] Docker image, pull-based deploy on the desktop, Tailscale Serve
+- [x] Installed on both phones and the UPERFECT
 
 ### Phase 2: Grocery list with offline sync (in daily use by mid-December)
 
@@ -437,7 +437,7 @@ Later: weather, chores and security camera tiles.
 
 ## Open decisions
 
-Seven of these eight choices are still open; each one changes how part of the build is done.
+Six of these eight choices are still open; each one changes how part of the build is done.
 
 - [ ] Mini PC model and OS: decides the kiosk setup and how the display turns off at night.
 - [x] iPhone or Android for each of us: Android for both, so Tailscale stays connected through Android's always-on VPN, and the android Playwright project matters most.
@@ -446,7 +446,7 @@ Seven of these eight choices are still open; each one changes how part of the bu
 - [ ] Christmas window: Christmas Dec 1 to 25 and New Year's Dec 26 to Jan 1 (the default), or one combined theme.
 - [ ] Processed originals: keep them (the default) or delete them to save space.
 - [ ] NAS drives and mirroring, and the off-site backup target: a free cloud drive through rclone crypt, or a USB drive kept elsewhere.
-- [ ] Tailnet access rules: keep the default policy, which lets every device reach every other, or add a grant so our devices can reach only HomeHub's HTTPS port.
+- [x] Tailnet access rules: keep the default policy, which lets every device reach every other, since the tailnet holds only our own devices (SEC-11). Revisit it in Phase 7, when the NAS can carry a tag that a rule names (ADR-0004).
 
 ## Cost watch-list
 
