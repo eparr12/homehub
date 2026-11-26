@@ -10,6 +10,12 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 const SHARED_IS_PURE = 'src/shared is pure TypeScript (ARCH-1).';
+const WEB_RUNS_NO_SERVER_CODE =
+  'src/web never imports runtime code from src/server (ARCH-2).';
+const WEB_TAKES_ONLY_APP_TYPE =
+  'Of src/server, src/web imports only `import type { AppType }` (ARCH-2).';
+const SERVER_NEVER_IMPORTS_WEB =
+  'src/server never imports from src/web (ARCH-3).';
 const SPECS_USE_THE_GUARD =
   'Import test and expect from ./fixtures.ts, whose guard fails a test on page errors and policy violations.';
 
@@ -37,10 +43,20 @@ export default defineConfig(
       jsxA11y.flatConfigs.recommended,
     ],
   },
+  // The import boundaries below use ESLint's own no-restricted-imports, which
+  // checks every pattern on its own: a type import that one pattern lets
+  // through still meets the others (ARCH-7). That rule reads only import and
+  // export declarations, so a dynamic import() would cross a boundary unseen,
+  // and each block refuses one with no-restricted-syntax and its own message.
   {
     files: ['src/shared/**/*.ts'],
     rules: {
-      '@typescript-eslint/no-restricted-imports': [
+      // Pure code loads nothing at run time, so every import() is refused.
+      'no-restricted-syntax': [
+        'error',
+        { selector: 'ImportExpression', message: SHARED_IS_PURE },
+      ],
+      'no-restricted-imports': [
         'error',
         {
           paths: builtinModules.map((name) => ({
@@ -58,26 +74,32 @@ export default defineConfig(
   {
     files: ['src/web/**/*.{ts,tsx}'],
     rules: {
-      '@typescript-eslint/no-restricted-imports': [
+      'no-restricted-syntax': [
         'error',
         {
+          selector: 'ImportExpression[source.value=/(^|\\/)server\\//]',
+          message: WEB_RUNS_NO_SERVER_CODE,
+        },
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          // Two patterns for ARCH-2, because each leaves a gap alone:
+          // allowTypeImports lets every type through, and allowImportNames
+          // can't refuse a bare import, which names nothing.
           patterns: [
             {
               group: ['**/server/**'],
               allowTypeImports: true,
-              message:
-                'src/web imports only `import type { AppType }` from src/server (ARCH-2).',
+              message: WEB_RUNS_NO_SERVER_CODE,
             },
-          ],
-        },
-      ],
-      // tsc enforces TS-3 under nodenext but not under src/web's bundler
-      // resolution. This is the core rule because a pattern in the rule above
-      // would skip any `import type` that allowTypeImports lets through.
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
+            {
+              group: ['**/server/**'],
+              allowImportNames: ['AppType'],
+              message: WEB_TAKES_ONLY_APP_TYPE,
+            },
+            // tsc enforces TS-3 under nodenext but not under src/web's
+            // bundler resolution.
             {
               regex: '^\\.{1,2}/(?:.*/)?[^./]+$',
               message: 'Relative imports include their file extension (TS-3).',
@@ -90,14 +112,18 @@ export default defineConfig(
   {
     files: ['src/server/**/*.ts'],
     rules: {
-      '@typescript-eslint/no-restricted-imports': [
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ImportExpression[source.value=/(^|\\/)web\\//]',
+          message: SERVER_NEVER_IMPORTS_WEB,
+        },
+      ],
+      'no-restricted-imports': [
         'error',
         {
           patterns: [
-            {
-              group: ['**/web/**'],
-              message: 'src/server never imports from src/web (ARCH-3).',
-            },
+            { group: ['**/web/**'], message: SERVER_NEVER_IMPORTS_WEB },
           ],
         },
       ],
@@ -106,7 +132,7 @@ export default defineConfig(
   {
     files: ['tests/e2e/**/*.spec.ts'],
     rules: {
-      '@typescript-eslint/no-restricted-imports': [
+      'no-restricted-imports': [
         'error',
         {
           // Both names export Playwright's test runner.
