@@ -187,6 +187,26 @@ Example outbox entry. The mutationId doubles as the idempotency key, so a retrie
 }
 ```
 
+### What each intent does
+
+applyIntent, in src/shared/grocery/reducer.ts, is that reducer. It takes the item an intent names, or none, the intent, and the short name of whoever made the change, and it returns the item as the intent leaves it or refuses the intent with a reason:
+
+| Intent | Needed item | Checked-off item | Deleted item | No such item |
+| --- | --- | --- | --- | --- |
+| AddItem | `item-exists` | `item-exists` | `item-exists` | Adds it |
+| MarkPurchased | Checks it off | No change | `item-deleted` | `item-not-found` |
+| NeedAgain | No change | Needed again | `item-deleted` | `item-not-found` |
+| SetQuantity | Sets it | Sets it | `item-deleted` | `item-not-found` |
+| EditNotes | Sets them | Sets them | `item-deleted` | `item-not-found` |
+| DeleteItem | Tombstone | Tombstone | No change | `item-not-found` |
+
+- No change returns the item exactly as it was, updatedAt included. The list already shows what was asked, so it counts as done and nobody gets a notice: two of us checking off the same item with no signal is the usual case, and the first check-off's time stands. SetQuantity to the quantity the item has, and EditNotes to the notes it has, are no change too.
+- AddItem builds the item from the intent: needed, addedBy the short name of whoever made it, the intent's device, addedAt and updatedAt the intent's occurredAt, purchasedAt null, and not deleted.
+- A change sets updatedAt to the intent's occurredAt. MarkPurchased also sets purchasedAt to it, and NeedAgain clears purchasedAt. Nothing else moves: SetQuantity and EditNotes leave a checked-off item checked off, and DeleteItem keeps every other field (SYNC-6).
+- The three reasons are a closed list: item-not-found, item-deleted and item-exists. An ID is never used twice, so AddItem for a deleted item's ID is item-exists.
+- An item whose id isn't the intent's itemId is the caller's bug, and applyIntent throws (TS-7).
+- Changes apply in the order the server receives them, not by their clocks, so on the same field the later sync wins.
+
 ### Server
 
 - POST /api/grocery/sync/push applies a batch of mutations in order, in one transaction, and returns a result for each: applied, duplicate or rejected.

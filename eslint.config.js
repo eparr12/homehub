@@ -10,6 +10,21 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 const SHARED_IS_PURE = 'src/shared is pure TypeScript (ARCH-1).';
+const SHARED_READS_NO_CLOCK =
+  'src/shared reads no clock and no random source, so that the client and the server give the same answer: take the value as a parameter (TS-8).';
+// The usual ways to read a clock or a random source, not every way:
+// `const { now } = Date` and `globalThis.Date.now()` get past. A Date built
+// from a value, Date.parse and Date.UTC stay allowed.
+const CLOCK_AND_RANDOM_READS = [
+  'NewExpression[callee.name="Date"][arguments.length=0]',
+  // Date() returns the time now whatever it's passed.
+  'CallExpression[callee.name="Date"]',
+  'MemberExpression[object.name="Date"][property.name="now"]',
+  'MemberExpression[object.name="Temporal"][property.name="Now"]',
+  'MemberExpression[object.name="performance"][property.name="now"]',
+  'MemberExpression[object.name="Math"][property.name="random"]',
+  'Identifier[name="crypto"]',
+];
 const WEB_RUNS_NO_SERVER_CODE =
   'src/web never imports runtime code from src/server (ARCH-2).';
 const WEB_TAKES_ONLY_APP_TYPE =
@@ -51,10 +66,16 @@ export default defineConfig(
   {
     files: ['src/shared/**/*.ts'],
     rules: {
-      // Pure code loads nothing at run time, so every import() is refused.
+      // Pure code loads nothing at run time, so every import() is refused,
+      // and it reads no clock. One entry for both, because a later block that
+      // set this rule would replace these options.
       'no-restricted-syntax': [
         'error',
         { selector: 'ImportExpression', message: SHARED_IS_PURE },
+        ...CLOCK_AND_RANDOM_READS.map((selector) => ({
+          selector,
+          message: SHARED_READS_NO_CLOCK,
+        })),
       ],
       'no-restricted-imports': [
         'error',
