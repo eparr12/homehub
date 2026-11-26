@@ -97,11 +97,23 @@ const ADJUSTED = [
     intent: { ...EDIT_NOTES, notes: '  Brown, a dozen ' },
     parsed: EDIT_NOTES,
   },
+  // Trimmed before the limit applies: a phone's keyboard leaves a space behind.
+  {
+    case: 'a name of 80 characters and a space, trimmed',
+    intent: { ...ADD_ITEM, name: 'n'.repeat(80) + ' ' },
+    parsed: { ...ADD_ITEM, name: 'n'.repeat(80) },
+  },
+  {
+    case: 'EditNotes notes of 500 characters and a line break, trimmed',
+    intent: { ...EDIT_NOTES, notes: 'n'.repeat(500) + '\n' },
+    parsed: { ...EDIT_NOTES, notes: 'n'.repeat(500) },
+  },
 ];
 
-// Numbers, not the constants: a limit can go up, but never down, because an
-// item or an outbox entry may already hold a value that long.
+// Numbers, not the constants: a limit can widen but never narrow, because an
+// item or an outbox entry may already hold a value at its edge.
 const AT_THE_LIMITS = [
+  { case: 'a name of 1 character', intent: { ...ADD_ITEM, name: 'n' } },
   {
     case: 'a name of 80 characters',
     intent: { ...ADD_ITEM, name: 'n'.repeat(80) },

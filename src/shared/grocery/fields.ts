@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-// A limit can go up, but never down: an item or an outbox entry may already
-// hold a value that long.
+// A limit can widen but never narrow: an item or an outbox entry may already
+// hold a value at its edge.
 const MIN_NAME_LENGTH = 1;
 const MAX_NAME_LENGTH = 80;
 const MAX_NOTES_LENGTH = 500;

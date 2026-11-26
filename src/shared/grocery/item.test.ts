@@ -113,13 +113,14 @@ const REFUSED = [
     case: 'a purchasedAt without milliseconds',
     item: { ...PURCHASED, purchasedAt: '2026-11-28T16:10:00Z' },
   },
-  {
-    case: 'no purchasedAt at all',
-    item: Object.fromEntries(
-      Object.entries(NEEDED).filter(([key]) => key !== 'purchasedAt'),
-    ),
-  },
   { case: 'isDeleted as a number', item: { ...DELETED, isDeleted: 1 } },
+  // Every field is required, purchasedAt too, though it may be null.
+  ...Object.keys(NEEDED).map((field) => ({
+    case: `an item without ${field}`,
+    item: Object.fromEntries(
+      Object.entries(NEEDED).filter(([key]) => key !== field),
+    ),
+  })),
 ];
 
 describe('groceryItemSchema', () => {
