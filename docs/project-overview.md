@@ -271,7 +271,7 @@ Tests:
 
 ## Wall kiosk setup
 
-Until the mini PC arrives, the UPERFECT is a second screen on the desktop, running the installed HomeHub app full screen at /wall. After that, the mini PC under the display runs a browser in kiosk mode, locked down so a stray swipe or pinch can't break it. Chromium launch flags:
+Until the mini PC arrives, the UPERFECT is a second screen on the desktop, showing /wall full screen in an Edge app window, as README.md's The wall, until Phase 6 sets up. After that, the mini PC under the display runs a browser in kiosk mode, locked down so a stray swipe or pinch can't break it. Chromium launch flags:
 
 ```text
 --kiosk --noerrdialogs --disable-pinch --overscroll-history-navigation=0 --disable-features=TouchpadOverscrollHistoryNavigation
@@ -437,10 +437,10 @@ Later: weather, chores and security camera tiles.
 
 ## Open decisions
 
-Eight choices are still open; each one changes how part of the build is done.
+Seven of these eight choices are still open; each one changes how part of the build is done.
 
 - [ ] Mini PC model and OS: decides the kiosk setup and how the display turns off at night.
-- [ ] iPhone or Android for each of us: decides the Tailscale always-on steps and which Playwright project matters most.
+- [x] iPhone or Android for each of us: Android for both, so Tailscale stays connected through Android's always-on VPN, and the android Playwright project matters most.
 - [ ] Lightroom Classic or Lightroom (cloud): decides how the export preset is set up.
 - [ ] Season start dates: astronomical-style (Mar 20) or meteorological (Mar 1).
 - [ ] Christmas window: Christmas Dec 1 to 25 and New Year's Dec 26 to Jan 1 (the default), or one combined theme.

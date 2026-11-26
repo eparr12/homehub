@@ -68,7 +68,32 @@ Dependabot (.github/dependabot.yml) checks npm packages, GitHub Actions and the 
 
 ## Deploy
 
-Every merge to main deploys itself. CI pushes the image to GHCR, and on the desktop a scheduled task runs deploy/update.ps1 every 5 minutes, which pulls the image and starts it. deploy/README.md sets up the host: the deploy folder, its .env, the task, the log, and how to roll back.
+Every merge to main deploys itself. CI pushes the image to GHCR, and on the desktop a scheduled task runs deploy/update.ps1 every 5 minutes, which pulls the image and starts it. deploy/README.md sets up the host: the deploy folder, its .env, the task, the log, and how to roll back. Its Publishing on the tailnet section puts HomeHub at its address, and Who may use it adds a person.
+
+## Put it on a phone or the wall
+
+Each device opens HomeHub at `https://homehub.<tailnet>.ts.net`. A new person first needs what deploy/README.md's Who may use it lists.
+
+### A phone
+
+Open the address in the phone's browser, then install it:
+
+- **iPhone:** in Safari, tap Share, then Add to Home Screen, and leave Open as Web App on. Not tried yet: both phones are Android.
+- **Android:** in Chrome, open the menu, tap Add to Home screen, then Install. In Edge, open the menu, tap Add to phone, then Install, not Create shortcut.
+
+Open HomeHub once from its icon while online before you count on it offline. The check is /api/me at the address in the browser, which shows your short name. To keep Tailscale connected, follow Phones stay connected under Access: private by design in docs/project-overview.md.
+
+### The wall, until Phase 6
+
+Until the mini PC arrives in Phase 6, the UPERFECT is the desktop's second screen:
+
+1. Connect an HDMI cable from the graphics card's HDMI port to the UPERFECT's port marked HD. The card has three DisplayPorts, one HDMI and no USB-C, and the UPERFECT takes HDMI or USB-C but has no DisplayPort input, so the monitor that was on the card's HDMI moves to a DisplayPort. For touch, run a USB cable from the desktop to the UPERFECT's TYPE-C port. The UPERFECT runs on its own power adapter.
+2. In Windows' display settings, extend the desktop onto it, in landscape at 1920 by 1080, 120 Hz and 100% scale. The wall is built and tested at that size (WEB-10).
+3. Map the touch to it: run `multidigimon -touch` and follow its prompts.
+4. Open the wall in an Edge app window, since Edge on this desktop can't install apps: Apps is greyed out in its menu, which says Managed by your organization. Press Win+R and run `msedge --app=https://homehub.<tailnet>.ts.net/wall`, which opens a window with no tabs and no address bar. Move it onto the UPERFECT with Win+Shift+Left or Right arrow, and press F11 for full screen. If F11 does nothing, click inside the window first, or press Fn+F11 on a keyboard whose F keys are media keys.
+5. Keep the screens on: `powercfg /change monitor-timeout-ac 0`.
+
+What the desktop can't do: its lock screen shows on the UPERFECT too, and after a restart the wall is back only once you've signed in and run step 4's command again.
 
 ## Configure
 
