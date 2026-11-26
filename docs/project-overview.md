@@ -51,7 +51,7 @@ The first release covers the wall display, grocery list, photos and holiday them
 
 ### Grocery list
 
-- Each item has a name, category (aisle), quantity, store and notes.
+- Each item has a name, a category (aisle) from a fixed list, a quantity and notes. Its store arrives in Phase 4, with shopping by store.
 - A persistent catalog of the staples we buy, ranked by how often we buy them.
 - The wall is mostly for adding: a quick-add grid of top staples by category, one tap each. Full editing works on both screens.
 - The phone is mostly for checking off in the store: "Start shopping at [store]" filters to that store and groups items by aisle.
@@ -167,7 +167,8 @@ Every client writes to a local database first and syncs through an outbox, so th
 
 - IDs are UUIDv7, generated with the npm uuid package's v7(); crypto.randomUUID() only makes v4.
 - Each change and its outbox entry are saved in one Dexie transaction.
-- Changes are recorded as intents, not overwrites: AddItem, MarkPurchased, NeedAgain, SetQuantity, EditNotes, DeleteItem.
+- Every ID and instant has one spelling, so equal strings mean the same thing: an ID is a UUIDv7 in lowercase, and an instant is UTC with exactly three fraction digits, such as 2026-11-28T16:10:00.000Z, as Date#toISOString writes it. At that fixed width, instants sort by time as plain strings.
+- Changes are recorded as intents, not overwrites: AddItem, MarkPurchased, NeedAgain, SetQuantity, EditNotes, DeleteItem. Each carries a mutationId, the itemId, occurredAt and the device it came from; AddItem adds the name, category, quantity and notes, SetQuantity the quantity and EditNotes the notes. No intent says who made it: the reducer takes that from its caller, and the server passes the short name from the request's identity (SEC-3).
 - One reducer in src/shared defines what each intent does. The client uses it to apply changes locally, and the server uses the same function, so the two can't disagree.
 - The outbox flushes shortly after each local change, on the online event, on visibilitychange, on a 30-second heartbeat while the app is open, and when a "pull now" event arrives. iOS Safari has no Background Sync API, so syncing only happens with the app open.
 - After a pull, unsent intents are re-applied on top of the server's rows, so local changes aren't overwritten.
@@ -181,7 +182,7 @@ Example outbox entry. The mutationId doubles as the idempotency key, so a retrie
   "mutationId": "019ab2c4-...",
   "itemId": "019ab2a0-...",
   "intent": "MarkPurchased",
-  "occurredAt": "2026-11-28T16:10:00Z",
+  "occurredAt": "2026-11-28T16:10:00.000Z",
   "device": "ethan-phone"
 }
 ```
@@ -191,7 +192,7 @@ Example outbox entry. The mutationId doubles as the idempotency key, so a retrie
 - POST /api/grocery/sync/push applies a batch of mutations in order, in one transaction, and returns a result for each: applied, duplicate or rejected.
 - GET /api/grocery/sync/pull?since={version} returns every row changed after the client's cursor, including deleted rows (tombstones), plus the new cursor and the current shopping session.
 - GET /api/events is a Server-Sent Events stream. After a commit that changed something, every connected client gets a `changed` event with no row data; data always travels through the pull endpoint.
-- Tables: grocery_items, catalog_items (Phase 4), stores, shopping_sessions, processed_mutations (each mutation ID with its result) and sync_state.
+- Tables: grocery_items, processed_mutations (each mutation ID with its result) and sync_state, and from Phase 4 catalog_items, stores and shopping_sessions.
 
 **Versioning.** Each push runs in one SQLite transaction that bumps a single counter row and stamps every changed row with the new version:
 
