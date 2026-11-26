@@ -248,7 +248,7 @@ tsconfig.base.json:
 ```
 
 - TypeScript 6 defaults `types` to an empty list, so each config names its own: `["node"]` at the root and in tests/e2e, and `["vite/client", "node", "vite-plugin-pwa/react"]` in src/web, where Node types are needed only because the client imports the server's `AppType`.
-- ESLint (flat config) uses typescript-eslint's strict-type-checked and stylistic-type-checked presets, eslint-plugin-react-hooks, eslint-plugin-jsx-a11y and `@typescript-eslint/no-restricted-imports` for the ARCH boundaries (with `allowTypeImports` for AppType). Prettier owns formatting through eslint-config-prettier.
+- ESLint (flat config) uses typescript-eslint's strict-type-checked and stylistic-type-checked presets, eslint-plugin-react-hooks, eslint-plugin-jsx-a11y and ESLint's core `no-restricted-imports` for the ARCH boundaries (with `allowTypeImports`, and `allowImportNames` so that `import type { AppType }` is src/web's one import from src/server). Prettier owns formatting through eslint-config-prettier.
 - Vitest runs two projects: node (src/shared, src/server, and deploy's tests, which run update.ps1 under pwsh with a stand-in for docker) and web (src/web, jsdom, fake-indexeddb, Testing Library).
 - Coverage uses @vitest/coverage-v8 and is on only when CI is set, so `npm run check` stays one command; `npm run test -- --coverage` prints it locally. It counts every file under src except src/server/test-support.ts, so a module no test imports shows at 0%, and prints a text table with no thresholds, so it never fails a run (TEST-3).
 - Playwright runs three projects: wall (Chromium at 1920 by 1080), iPhone (WebKit) and Android (Chromium, Pixel viewport), with @axe-core/playwright for accessibility.
