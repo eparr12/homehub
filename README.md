@@ -1,5 +1,35 @@
-# homehub
-HomeHub: our family dashboard for a wall touchscreen and our phones
+# HomeHub
+
+HomeHub is our family's dashboard, on a 1920 by 1080 touchscreen in our entryway and on both of our phones. It's for the two of us, and it has three features: a grocery list that works with no signal in the store, a display of photos exported from Lightroom, and a countdown to the next holidays, with seasonal color themes. It's never on the public internet: every device reaches it over Tailscale, and it costs $0 to run.
+
+## What v0.1.0 holds
+
+v0.1.0 is the walking skeleton, the release that closes Phase 1. HomeHub runs in Docker on the desktop, every merge to main deploys itself there, and the app is installed on both phones and open on the wall. It holds:
+
+- **The server**, Node 26 and Hono in one Docker image. It keeps its data in SQLite and backs the database up before it applies a migration. It answers only to its own names, and its API, the health check aside, only to the Tailscale logins on its allowed list. GET /api/health reports its status, its database and its version, and GET /api/me the caller's short name. It serves the web app with a Content Security Policy that allows only its own origin.
+- **The web app**, an installable PWA that loads offline, with the phone layout at / and the wall layout at /wall. The wall's status card shows whether the server and its database answer, and the server's version. The wall's other cards, and the phone's Groceries, Photos and Holidays views, are placeholders.
+- **The checks:** unit tests in Vitest, end-to-end tests in Playwright on a wall, an iPhone and an Android phone, and CI that builds the image, starts it as the host does and, on main, pushes it.
+
+The grocery list comes in Phase 2, the holiday countdown and themes in Phase 3, more grocery features in Phase 4 and the photos in Phase 5. Each phase ends at a gate (docs/build-plan.md), and each gate gets a release: v0.1.0 for Phase 1, up to v1.0.0 when HomeHub runs on the NAS in Phase 7.
+
+## How a request travels
+
+```mermaid
+flowchart LR
+    device["Phone or wall"] -->|"HTTPS over the tailnet"| serve["Tailscale Serve<br/>on the host"]
+    serve -->|"127.0.0.1:8080, with<br/>the user's identity"| server["HomeHub server<br/>in Docker"]
+    server --> db[("SQLite<br/>in a Docker volume")]
+```
+
+A device opens `https://homehub.<tailnet>.ts.net`, and Tailscale carries the request to Tailscale Serve on the host, which adds the user's identity headers and passes it to the container on 127.0.0.1:8080. There the server refuses any request that names it by something other than one of its own names, then any /api request but the health check whose login isn't on its list, before a route answers.
+
+## Read on
+
+- [docs/project-overview.md](docs/project-overview.md): the design, part by part
+- [docs/build-plan.md](docs/build-plan.md): the phases, their steps and their gates
+- [docs/coding-standards.md](docs/coding-standards.md): the rules, each with an ID such as SYNC-5
+- [docs/adr](docs/adr): the decisions, with the alternatives they were chosen over
+- [deploy/README.md](deploy/README.md): setting up and running the host
 
 ## Develop
 
