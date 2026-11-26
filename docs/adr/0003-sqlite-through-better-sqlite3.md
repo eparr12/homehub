@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-HomeHub's data is small: a grocery list, a catalog of staples, theme rules and photo metadata, for two people. One server process reads and writes all of it, in one container on one host (ADR-0002), and the overview's goals ask for a database that's just a file, with no cloud database.
+HomeHub's data will be small: a grocery list, a catalog of staples, theme rules and photo metadata, for two people. One server process reads and writes all of it, in one container on one host (ADR-0002), and the overview's goals ask for a database that's just a file, with no cloud database.
 
 The first design kept the data in PostgreSQL 18, through EF Core, and PostgreSQL needed care that SQLite doesn't. The sync design's pull returns every row whose version is above the client's cursor (ADR-0005), so versions have to become visible in the order they're numbered. A PostgreSQL sequence hands out its numbers when a row is written, not when its transaction commits, so a sync cursor could skip a row that committed late. The first design's fix was a counter row whose lock made writers wait.
 
@@ -27,7 +27,7 @@ UPDATE sync_state SET version = version + 1 WHERE id = 1 RETURNING version;
 Building the database layer in #3 settled three more things:
 
 - **Prebuilt binaries, and no install script.** package.json's `allowScripts` denies better-sqlite3's install script. The package ships prebuilt binaries for Windows and Linux, but an install from the lockfile, such as `npm ci`, ignores its `"gypfile": false` and would run node-gyp, which needs Python and build tools. #3 saw it: npm 11.20 ran `node-gyp rebuild`, which failed without Python and build tools. npm honors `allowScripts` from 11.16, so HomeHub needs Node.js 26.4 or newer, which ships npm 11.17.
-- **Migrations run with foreign keys off.** Each numbered file runs with its `PRAGMA user_version` in one transaction, after a backup of any database that already has a schema (DATA-4). SQLite's table-rebuild procedure needs foreign keys off, because the pragma does nothing inside a transaction, and while it's on, a DROP TABLE runs the ON DELETE actions on the child rows. So the migrator turns them off for the file and checks every foreign key before the file commits, and a broken reference rolls the file back. ON DELETE actions don't fire during a migration, and a file never contains BEGIN, COMMIT or PRAGMA foreign_keys.
+- **Migrations run with foreign keys off.** Each numbered file runs with its `PRAGMA user_version` in one transaction, after a backup of any database that already has a schema (DATA-4). SQLite's table-rebuild procedure needs foreign keys off, because while they're on, a DROP TABLE runs the ON DELETE actions on the child rows. The pragma does nothing inside a transaction, so the migrator turns them off before the file's transaction begins. It checks every foreign key before the file commits, and a broken reference rolls the file back. So ON DELETE actions don't fire during a migration, and a file never contains BEGIN, COMMIT or PRAGMA foreign_keys.
 - **A newer database starts with a warning.** When the database's version is above the image's newest migration, the migrator logs a warning and starts without migrating. Migrations only add tables and columns (DATA-11), so this is what lets a rollback to an older image work.
 
 ## Alternatives considered

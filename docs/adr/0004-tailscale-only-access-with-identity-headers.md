@@ -50,7 +50,7 @@ Two more things were decided along the way:
 
 HomeHub has no sign-in code to write or keep working offline, and the server never listens beyond 127.0.0.1. Its limits, stated plainly:
 
-- **Identity is the tailnet user, not the device or the program.** Any program on any of my machines on the tailnet reaches HomeHub as me, a Claude Code session included, which is why CLAUDE.md lets such a session send the address only the GET requests a prompt names. The wall signs in to Tailscale as one of us too, so the sync design records a device name, such as "wall", with each change (ADR-0005).
+- **Identity is the tailnet user, not the device or the program.** Any program on any of my machines on the tailnet reaches HomeHub as me, a Claude Code session included, which is why CLAUDE.md lets such a session send the address only the GET requests a prompt names. The wall signs in to Tailscale as one of us too, so the app will also record a device name, such as "wall", to show where a change came from (Access: private by design, in the overview).
 - **Any program on the host can reach the port and send the header itself.** The Host check stops only a browser, which writes the Host from a page's address. Any other program sends whatever Host it likes.
 - **An organization I don't control sets policy on the wall's browser.** Until Phase 6 the wall runs in Edge on the desktop, and a work or school account manages that Edge, which is why it can't install an app there. So that account's organization sets policy on the browser that holds the wall's session. The mini PC won't have that account.
 - **Serve stays on port 443.** A second HTTPS port would put its number in the Host, and every request through it would get a 421 (deploy/README.md).

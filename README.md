@@ -1,6 +1,6 @@
 # HomeHub
 
-HomeHub is our family's dashboard, on a 1920 by 1080 touchscreen in our entryway and on both of our phones. It's for the two of us, and it has three features: a grocery list that works with no signal in the store, a display of photos exported from Lightroom, and a countdown to the next holidays, with seasonal color themes. It's never on the public internet: every device reaches it over Tailscale, and it costs $0 to run.
+HomeHub is our family's dashboard, on a 1920 by 1080 touchscreen in our entryway and on both of our phones. It's for the two of us, and it will have three features: a grocery list that works with no signal in the store, a display of photos exported from Lightroom, and a countdown to the next holidays, with seasonal color themes. It's never on the public internet: every device reaches it over Tailscale, and it costs $0 to run.
 
 ## What v0.1.0 holds
 

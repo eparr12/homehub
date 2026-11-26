@@ -22,7 +22,7 @@ HomeHub is one TypeScript codebase in one npm package, from the wall to the data
 
 The reasons:
 
-- **One language on both sides.** The client and the server share the Zod schemas and the intent reducer, so the compiler catches a change that touches one side only. That matters most when an AI writes the code.
+- **One language on both sides.** The client and the server share the Zod schemas now, and the intent reducer from Phase 2, so the compiler catches a change that touches one side only. That matters most when an AI writes the code.
 - **No build step for the server.** Node 26 runs the server's TypeScript by stripping its types, so the image runs src/server/main.ts as it is in the repo.
 - **No generated code.** Hono's client takes its types from the routes: src/web imports `type AppType` from src/server/app.ts, and the compiler checks each call that `hc<AppType>` makes against the routes as they are (SRV-1, SRV-3).
 - **Our own hardware from day one.** There's no cloud credit to watch (the first plan's free cloud database lasted 12 months) and no later move off the cloud.
@@ -37,7 +37,7 @@ The alternative is the first design, part by part. ADR-0003 weighs its database,
 
 **Generated API types.** The first design generated the client's types from the server's OpenAPI document. Hono's typed client needs no generator: the client's types come from the server's routes, so the two can't drift.
 
-**SignalR for live updates.** HomeHub sends clients only a "pull now" nudge with no data in it (SYNC-7, ADR-0005). Server-Sent Events carry that over plain HTTP, browsers reconnect to them on their own, and Hono's streamSSE helper sends them, so the server needs nothing more.
+**SignalR for live updates.** HomeHub will send clients only a "pull now" nudge with no data in it (SYNC-7, ADR-0005). Server-Sent Events carry that over plain HTTP, browsers reconnect to them on their own, and Hono's streamSSE helper can send them, so the server needs nothing more.
 
 ## Consequences
 

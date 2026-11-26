@@ -1242,6 +1242,7 @@ and every setup command.
 
 **You:**
 
+- Before the move, decide whether the NAS checks more than the main tag before it runs an image (ADR-0006), and whether a rule limits each person's devices now that the NAS can carry a tag (ADR-0004).
 - Pick a quiet evening, and check that every device's outbox is empty.
 - On the NAS, set up /srv/homehub with compose.yaml and .env, start it once to check it runs, then stop it.
 - On the desktop, run `docker compose down` in C:\HomeHub, so SQLite closes cleanly, then copy the whole data folder to /srv/homehub/data on the NAS.

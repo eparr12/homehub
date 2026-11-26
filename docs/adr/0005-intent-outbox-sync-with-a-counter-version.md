@@ -23,7 +23,7 @@ Every client, the wall included, writes to its local Dexie database first and sy
 - **Pull.** GET /api/grocery/sync/pull?since={version} returns every row changed after the client's cursor, with deleted rows as tombstones (SYNC-6), and the new cursor. The client then re-applies its unsent intents on top of the server's rows, so its local changes aren't overwritten (SYNC-8).
 - **A nudge, not data.** After a commit that changed something, GET /api/events sends every connected client a `changed` event with no row data, at most the latest version, and the client pulls (SYNC-7).
 - **When it syncs.** The outbox flushes shortly after each local change, on the online event, on visibilitychange, on a 30-second heartbeat while the app is open, and when a "pull now" event arrives.
-- **What fails, and how.** A rejected change, such as checking off an item someone deleted, leaves the outbox and shows in the UI. Network errors and 5xx responses retry with backoff, and nothing retries forever (SYNC-9).
+- **What fails, and how.** A rejected change, such as checking off an item someone deleted, leaves the outbox and shows in the UI, and a 4xx response isn't retried either. Network errors and 5xx responses retry with backoff, so a change made in a dead zone waits in the outbox until the server answers (SYNC-9).
 
 The counter is what keeps a cursor from skipping a row. SQLite allows one writer at a time, and better-sqlite3 runs each transaction synchronously, so versions are committed strictly in order, as long as the bump and the writes share one transaction (ADR-0003).
 
