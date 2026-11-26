@@ -46,7 +46,8 @@ export interface IdentityOptions {
  * Lets a request through only when its Tailscale-User-Login is on
  * ALLOWED_USERS, and answers any other with a 401 problem (SEC-3). The header
  * is trusted only because Tailscale Serve on the same machine is the server's
- * one client (SEC-2).
+ * one client from the tailnet (SEC-2), and ownHost has already refused a web
+ * page that reached the port under its own name.
  */
 export function identity({ allowedUsers, devUser }: IdentityOptions) {
   return createMiddleware<IdentifiedEnv>(async (c, next) => {
