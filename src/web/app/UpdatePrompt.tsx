@@ -1,3 +1,4 @@
+import { FOCUS_RING } from '../components/focus-ring.ts';
 import { useAppUpdate } from './AppUpdates.tsx';
 
 /**
@@ -16,7 +17,7 @@ export function UpdatePrompt() {
           <button
             type="button"
             onClick={apply}
-            className="min-h-12 min-w-12 rounded-lg bg-text px-4 font-semibold text-surface focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className={`min-h-12 min-w-12 rounded-lg bg-text px-4 font-semibold text-surface ${FOCUS_RING} focus-visible:outline-offset-2`}
           >
             Reload
           </button>

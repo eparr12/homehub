@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router';
+import { FOCUS_RING } from '../components/focus-ring.ts';
 import { OfflineBadge } from '../components/OfflineBadge.tsx';
 import { WALL_PATH } from './paths.ts';
 import { UpdatePrompt } from './UpdatePrompt.tsx';
@@ -9,8 +10,7 @@ const VIEWS = [
   { path: '/holidays', label: 'Holidays' },
 ] as const;
 
-const FOCUS_RING =
-  'focus-visible:outline-4 focus-visible:-outline-offset-4 focus-visible:outline-accent';
+const LINK_FOCUS_RING = `${FOCUS_RING} focus-visible:-outline-offset-4`;
 
 /**
  * The phone layout: the current view above a bottom navigation, from 360 px
@@ -27,7 +27,7 @@ export function PhoneLayout() {
           {/* An installed app always opens at / and has no address bar. */}
           <Link
             to={WALL_PATH}
-            className={`flex min-h-12 min-w-12 items-center justify-center rounded-lg text-text-muted underline underline-offset-4 ${FOCUS_RING}`}
+            className={`flex min-h-12 min-w-12 items-center justify-center rounded-lg text-text-muted underline underline-offset-4 ${LINK_FOCUS_RING}`}
           >
             Wall
           </Link>
@@ -46,7 +46,7 @@ export function PhoneLayout() {
             <li key={view.path}>
               <NavLink
                 to={view.path}
-                className={`flex min-h-14 items-center justify-center border-t-4 border-transparent text-text-muted aria-[current=page]:border-accent aria-[current=page]:font-semibold aria-[current=page]:text-accent ${FOCUS_RING}`}
+                className={`flex min-h-14 items-center justify-center border-t-4 border-transparent text-text-muted aria-[current=page]:border-accent aria-[current=page]:font-semibold aria-[current=page]:text-accent ${LINK_FOCUS_RING}`}
               >
                 {view.label}
               </NavLink>

@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { type ComponentType, useId, useRef, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
+import { FOCUS_RING } from '../components/focus-ring.ts';
 import { OfflineBadge } from '../components/OfflineBadge.tsx';
 
 /** One card on the wall's grid. */
@@ -17,7 +18,6 @@ export interface WallCardSpec {
 
 const CARD_FRAME =
   'relative flex flex-col gap-4 overflow-hidden rounded-3xl border border-border bg-surface-raised p-8 select-none';
-const FOCUS_RING = 'focus-visible:outline-4 focus-visible:outline-accent';
 // 64 px tall at the least, the wall's touch target (WEB-7).
 const WALL_BUTTON = `min-h-16 min-w-16 rounded-2xl bg-text px-8 text-3xl font-semibold text-surface ${FOCUS_RING} focus-visible:outline-offset-4`;
 
