@@ -526,9 +526,9 @@ Phase 2 makes HomeHub useful: a grocery list that works in a store with no signa
 ```text
 Read the Grocery sync design in docs/project-overview.md and the SYNC rules.
 In src/shared/grocery:
-- Zod schemas for a grocery item (id, name, category, quantity, store,
-  notes, status needed or purchased, addedBy, device, timestamps,
-  isDeleted) and for each intent: AddItem, MarkPurchased, NeedAgain,
+- Zod schemas for a grocery item (id, name, category, quantity, notes,
+  status needed or purchased, addedBy, device, timestamps, isDeleted)
+  and for each intent: AddItem, MarkPurchased, NeedAgain,
   SetQuantity, EditNotes and DeleteItem, each with mutationId, itemId,
   occurredAt and device
 - applyIntent(item or undefined, intent), returning { ok: true, item } or
@@ -563,7 +563,7 @@ summarizing SYNC-1 to SYNC-11 and pointing to the overview's sync section.
 ```text
 Add the next migration, for groceries, per DATA-1 to DATA-3 and SYNC-4 to
 SYNC-6:
-grocery_items (with sync_version and is_deleted), stores, and
+grocery_items (with sync_version and is_deleted) and
 processed_mutations (mutation_id primary key, status, reason,
 processed_at). Index sync_version. Add a repo with prepared statements to
 get and upsert an item, list rows changed since a version, and look up or
@@ -697,7 +697,7 @@ Build the grocery UI per the Grocery list requirements in
 docs/project-overview.md and WEB-1 to WEB-11:
 - phone: items grouped by category, tap to check off (checked items move
   to the bottom), and a sheet to add or edit the name, category,
-  quantity, store and notes; rejected changes appear with retry and
+  quantity and notes; rejected changes appear with retry and
   dismiss
 - wall: a grocery tile with the needed items and a simple add form (the
   quick-add grid comes in Phase 4)
@@ -941,10 +941,11 @@ Keep a search-and-add field for anything not in the grid.
 **Prompt:**
 
 ```text
-Let each item have a store (or any store) and each store an aisle order for
-the categories, synced like the other grocery data. Starting a trip on the
-phone filters to that store, groups by aisle order, and moves checked
-items to the bottom.
+Add the stores table in a new migration, each store with an aisle order
+for the categories, synced like the other grocery data, and an optional
+storeId on the item and on AddItem (SYNC-10), where none means any store.
+Starting a trip on the phone filters to that store, groups by aisle
+order, and moves checked items to the bottom.
 ```
 
 **Done when:** a trip at your usual store follows its aisle order.
