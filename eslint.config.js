@@ -14,6 +14,8 @@ const WEB_RUNS_NO_SERVER_CODE =
   'src/web never imports runtime code from src/server (ARCH-2).';
 const WEB_TAKES_ONLY_APP_TYPE =
   'Of src/server, src/web imports only `import type { AppType }` (ARCH-2).';
+const SERVER_NEVER_IMPORTS_WEB =
+  'src/server never imports from src/web (ARCH-3).';
 const SPECS_USE_THE_GUARD =
   'Import test and expect from ./fixtures.ts, whose guard fails a test on page errors and policy violations.';
 
@@ -43,10 +45,17 @@ export default defineConfig(
   },
   // The import boundaries below use ESLint's own no-restricted-imports, which
   // checks every pattern on its own: a type import that one pattern lets
-  // through still meets the others (ARCH-7).
+  // through still meets the others (ARCH-7). That rule reads only import and
+  // export declarations, so a dynamic import() would cross a boundary unseen,
+  // and each block refuses one with no-restricted-syntax and its own message.
   {
     files: ['src/shared/**/*.ts'],
     rules: {
+      // Pure code loads nothing at run time, so every import() is refused.
+      'no-restricted-syntax': [
+        'error',
+        { selector: 'ImportExpression', message: SHARED_IS_PURE },
+      ],
       'no-restricted-imports': [
         'error',
         {
@@ -65,6 +74,13 @@ export default defineConfig(
   {
     files: ['src/web/**/*.{ts,tsx}'],
     rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ImportExpression[source.value=/(^|\\/)server\\//]',
+          message: WEB_RUNS_NO_SERVER_CODE,
+        },
+      ],
       'no-restricted-imports': [
         'error',
         {
@@ -96,14 +112,18 @@ export default defineConfig(
   {
     files: ['src/server/**/*.ts'],
     rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ImportExpression[source.value=/(^|\\/)web\\//]',
+          message: SERVER_NEVER_IMPORTS_WEB,
+        },
+      ],
       'no-restricted-imports': [
         'error',
         {
           patterns: [
-            {
-              group: ['**/web/**'],
-              message: 'src/server never imports from src/web (ARCH-3).',
-            },
+            { group: ['**/web/**'], message: SERVER_NEVER_IMPORTS_WEB },
           ],
         },
       ],
