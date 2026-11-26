@@ -142,7 +142,7 @@ https://homehub.<tailnet>.ts.net (tailnet only)
 |-- / proxy http://127.0.0.1:8080
 ```
 
-It must say tailnet only. Never turn on Funnel, which would put HomeHub on the internet (SEC-2). If the status ever says anything else, run `tailscale serve reset`, then publish again. `--bg` keeps the setting across restarts. Tailscale on Windows runs in your session, like Docker Desktop, so the address answers once you've signed in. To stop publishing, run `tailscale serve --https=443 off`.
+It must say tailnet only. Never turn on Funnel, which would put HomeHub on the internet (SEC-2). If the status ever says anything else, run `tailscale serve reset`, then publish again. Two things come from Tailscale's docs, and no restart has tried them yet: `--bg` keeps the setting across restarts, and Tailscale on Windows runs in your session, like Docker Desktop, so the address answers once you've signed in ([Run unattended](https://tailscale.com/kb/1088/run-unattended)). To stop publishing, run `tailscale serve --https=443 off`.
 
 What Serve does to a request:
 
@@ -154,16 +154,17 @@ What Serve does to a request:
 
 A person needs a device on the tailnet, signed in to Tailscale as themselves, and their pair in ALLOWED_USERS:
 
-1. Invite them from the admin console's Users page ([Tailscale's guide](https://tailscale.com/kb/1371/invite-users)). They accept the invite in a browser before they sign in to the Tailscale app.
-2. Add their pair to ALLOWED_USERS in C:\HomeHub\.env, as in step 4, with the login as the Users page shows it. The task's next run replaces the container and logs a `new container` line.
-3. On their device, open `https://homehub.<tailnet>.ts.net/api/me`, which shows their short name. That's the check, because a device whose login isn't on the list still gets every page of the app, installs it and loads it offline; only /api/me answers it with a 401.
+1. Invite them from the admin console's Users page ([Tailscale's steps](https://tailscale.com/docs/features/sharing/how-to/invite-any-user)). They accept the invite in a browser before they sign in to the Tailscale app.
+2. Check that their device is on the admin console's Machines page, under their name. If they're on Users but the device isn't on Machines, its Tailscale app is signed in to another tailnet, and switching the account in the app to ours fixes it.
+3. Add their pair to ALLOWED_USERS in C:\HomeHub\.env, as in Setting up's step 4, with the login as the Users page shows it. The task's next run replaces the container and logs a `new container` line.
+4. On their device, open `https://homehub.<tailnet>.ts.net/api/me`, which shows their short name. That's the check, because a device whose login isn't on the list still gets every page of the app, installs it and loads it offline; only /api/me answers it with a 401.
 
 A line the server can't read stops HomeHub. Every run then logs a `failed: docker compose up` line in update.log, and `docker logs homehub-homehub-1 --tail 5` shows the server's `invalid configuration` lines. Each one's error field names the variable and the entry, such as `Entry 2 isn't a login=shortname pair`, never a login. Fix the line, and the next run starts HomeHub again.
 
-A 401 carries a requestId. The server's log line with that ID gives the reason, never the login: `login not on ALLOWED_USERS`, or `login header missing` for a tagged device or a request that didn't come through Serve.
+A 401 carries a requestId. The server's log line with that ID gives the reason, never the login: `login not on ALLOWED_USERS`, or `login header missing` for a tagged device or a request that didn't come through Serve. To find it, put the 401's requestId in place of this made-up one:
 
 ```powershell
-docker logs homehub-homehub-1 | Select-String <requestId>
+docker logs homehub-homehub-1 | Select-String '3f6c1e2a-9b4d-4f7a-8c5e-2d1b0a9f8e7d'
 ```
 
 A lost phone is removed from the tailnet in the admin console the same day (SEC-11).

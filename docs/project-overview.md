@@ -271,7 +271,7 @@ Tests:
 
 ## Wall kiosk setup
 
-Until the mini PC arrives, the UPERFECT is a second screen on the desktop, running the installed HomeHub app full screen at /wall. After that, the mini PC under the display runs a browser in kiosk mode, locked down so a stray swipe or pinch can't break it. Chromium launch flags:
+Until the mini PC arrives, the UPERFECT is a second screen on the desktop, showing /wall full screen in an Edge app window, as README.md's The wall, until Phase 6 sets up. After that, the mini PC under the display runs a browser in kiosk mode, locked down so a stray swipe or pinch can't break it. Chromium launch flags:
 
 ```text
 --kiosk --noerrdialogs --disable-pinch --overscroll-history-navigation=0 --disable-features=TouchpadOverscrollHistoryNavigation
