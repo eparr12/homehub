@@ -167,6 +167,6 @@ A 401 carries a requestId. The server's log line with that ID gives the reason, 
 docker logs homehub-homehub-1 | Select-String '3f6c1e2a-9b4d-4f7a-8c5e-2d1b0a9f8e7d'
 ```
 
-A 421, Misdirected Request, means the request named the server by something other than one of its own names: a name under ts.net, such as the address, or a loopback name, such as 127.0.0.1. The server refuses it before it reads the login, because a web page on the host could otherwise reach port 8080 under its own name and send any login (SEC-3). A 421 carries a requestId too, and its log line's reason is `Host not a loopback name or under ts.net`.
+A 421, Misdirected Request, means the request named the server by something other than one of its own names: a name under ts.net with no port, such as the address, or a loopback name, such as 127.0.0.1, on any port. The server refuses it before it reads the login, because a web page on the host could otherwise reach port 8080 under a name of its own and send any login (SEC-3). Such a page has to name the port, while the address needs none, because a browser leaves out HTTPS's default port. So Serve has to stay on port 443: a second HTTPS port would put its number in the Host, and every request through it would get a 421. A 421 carries a requestId too, and the same search finds its log line, which gives the reason, `Host not one of the server's names`, and names the refused Host, port and all, in refusedHost.
 
 A lost phone is removed from the tailnet in the admin console the same day (SEC-11).

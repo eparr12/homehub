@@ -13,6 +13,13 @@ import {
 const OTHER_SITE = 'attacker.example';
 // A made-up name on the tailnet: the real one stays out of the repo (GIT-7).
 const TAILNET_NAME = 'homehub.example-tailnet.ts.net';
+// What a page under a rebound name sends: a forged login, and the
+// Sec-Fetch-Site that csrf lets through, since to the browser the server is
+// the page's own origin.
+const REBOUND_PAGE_HEADERS = {
+  ...ALEX_HEADERS,
+  'Sec-Fetch-Site': 'same-origin',
+} as const;
 const ASSET = 'assets/index-Btv5KHVt.js';
 // Hono's method for middleware added with use() and handlers added with all().
 const ANY_METHOD = 'ALL';
@@ -39,8 +46,7 @@ async function expectMisdirected(response: Response): Promise<void> {
       type: 'about:blank',
       title: 'Misdirected Request',
       status: 421,
-      detail:
-        "The request's Host is neither a loopback name nor a name under ts.net.",
+      detail: "The request's Host isn't one of the server's names.",
       requestId: response.headers.get('X-Request-Id'),
     },
   });
@@ -56,6 +62,10 @@ describe('own host', () => {
     `${TAILNET_NAME}.attacker.example`,
     // To a browser, a second origin, with its own offline data.
     `${TAILNET_NAME}.`,
+    // A page under a rebound name has to name the server's port. Two ports,
+    // so that a check of only one of them fails.
+    `${TAILNET_NAME}:8080`,
+    'evil.example-tailnet.ts.net:8443',
     '0.0.0.0:8080',
     '192.168.1.20:8080',
   ])(
@@ -87,6 +97,20 @@ describe('own host', () => {
 
     expect(response.status).toBe(200);
   });
+
+  it.each(['POST', 'PUT', 'DELETE', 'OPTIONS'])(
+    "refuses %s under another site's name with the 421 problem",
+    async (method) => {
+      const app = await createTestApp();
+
+      const response = await app.request(`http://${OTHER_SITE}/api/me`, {
+        method,
+        headers: REBOUND_PAGE_HEADERS,
+      });
+
+      await expectMisdirected(response);
+    },
+  );
 
   it.each([
     '/api/health',
@@ -121,9 +145,7 @@ describe('own host', () => {
           {
             // GET for middleware, which the web files answer.
             method: method === ANY_METHOD ? 'GET' : method,
-            // What a page under the rebound name sends: to the browser, it's
-            // the page's own origin.
-            headers: { ...ALEX_HEADERS, 'Sec-Fetch-Site': 'same-origin' },
+            headers: REBOUND_PAGE_HEADERS,
           },
         );
         return `${method} ${path} ${String(response.status)}`;
@@ -136,18 +158,19 @@ describe('own host', () => {
     );
   });
 
-  it('logs a refusal with its reason and the request ID, never the login or short name', async () => {
+  it('logs a refusal with its reason, the refused Host with its port and the request ID, never the login or short name', async () => {
     const { log, lines } = captureLogs();
     const app = await createTestApp({ log });
 
-    const response = await app.request(`http://${OTHER_SITE}/api/me`, {
+    const response = await app.request(`http://${OTHER_SITE}:8080/api/me`, {
       headers: ALEX_HEADERS,
     });
 
     expect(lines[0]).toEqual({
       level: 'warn',
       requestId: response.headers.get('X-Request-Id'),
-      reason: 'Host not a loopback name or under ts.net',
+      reason: "Host not one of the server's names",
+      refusedHost: `${OTHER_SITE}:8080`,
       msg: 'request refused',
     });
   });
